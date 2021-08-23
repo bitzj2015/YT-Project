@@ -1,13 +1,13 @@
 import json
 import ray
 import os
-import requests
 import subprocess
 import logging
 from tqdm import tqdm
-import html2text
 import random
-import time
+
+
+TAG = "_new"
 
 logging.basicConfig(
     filename="./logs/log_videotext.txt",
@@ -19,17 +19,8 @@ logging.basicConfig(
 logger=logging.getLogger() 
 logger.setLevel(logging.INFO) 
 
-proxyDict = {
-              "https": "http://50.235.149.74:8080"
-}
-
 proxy_list = [
     "http://69.30.215.222:3128"
-    # "http://jiang:1997@173.44.153.158:12345",
-    # "http://jiang:1997@191.102.182.197:12345",
-    # "http://jiang:1997@198.46.175.81:12345",
-    # "http://jiang:1997@107.172.71.110:12345",
-    # "http://jiang:1997@192.210.190.55:12345"
 ]
 @ray.remote
 def get_video_transcript(video_text_url: list):
@@ -39,7 +30,7 @@ def get_video_transcript(video_text_url: list):
                         "--proxy", proxy_list[random.randint(0,len(proxy_list)-1)]], stdout=subprocess.PIPE).stdout
 
 def get_all_video_transcript(
-    video_metadata_path: str="../dataset/video_metadata_new.json"
+    video_metadata_path: str=f"../dataset/video_metadata{TAG}.json"
 ):
     with open(video_metadata_path, "r") as json_file:
         video_metadata = json.load(json_file)
@@ -55,7 +46,7 @@ def get_all_video_transcript(
     video_id_list = list(video_ids.keys())
     num_cpus = os.cpu_count()
     batch_size = len(video_id_list) // num_cpus + 1
-    # print(video_id_list[0:10])
+
     logger.info("Start getting text.")
     ray.init()
     ray.get(
@@ -64,4 +55,4 @@ def get_all_video_transcript(
     ray.shutdown()
 
 if __name__=="__main__":
-    get_all_video_transcript()
+    get_all_video_transcript(f"../dataset/video_metadata{TAG}.json")
