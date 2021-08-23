@@ -135,5 +135,9 @@ dmypy.json
 */logs/*
 */tmp/*
 */fig/*
-*/params/*
+*/param/*
 *.json
+logs/*
+git/*
+tmp/*
+
