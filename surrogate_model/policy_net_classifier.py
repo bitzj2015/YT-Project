@@ -43,6 +43,12 @@ class PolicyNetClassifier(torch.nn.Module):
         # print(outputs.size(), label.size())
         logits = torch.gather(F.log_softmax(outputs, -1), -1, label)
 
+        # for i in range(len(mask)):
+        #     for j in range(sum(mask[i])):
+        #         label_type[i][j] *=0
+        #         label_type[i][j][0] = 1
+        # logits = torch.gather(F.log_softmax(outputs, -1), -1, label)
+        
         # Get softmax and logits
         logits = mask * label_type * logits
         logits = logits.mean(2) # / (label_type.sum(2) + 1e-10)
