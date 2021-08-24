@@ -35,10 +35,10 @@ class PolicyNetClassifier(torch.nn.Module):
         # batch_size * seq_len * emb_dim -> batch_size * seq_len * (2*hidden_dim)
         outputs, _ = self.lstm(inputs)
 
-        # batch_size * seq_len * (2*hidden_dim) -> batch_size * seq_len * video_embeddings
+        # batch_size * seq_len * (2*hidden_dim) -> batch_size * seq_len * num_videos
         outputs = self.relu(self.linear(outputs))
 
-        # batch_size * seq_len * emb_dim * num_videos
+        # batch_size * seq_len * num_videos
         label = label.long()
         # print(outputs.size(), label.size())
         logits = torch.gather(F.log_softmax(outputs, -1), -1, label)

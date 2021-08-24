@@ -38,6 +38,7 @@ def sample_false_label(
             idx +=1 
             continue
         ret.append(false_label[idx])
+        idx += 1
     return ret
 
 
@@ -59,9 +60,9 @@ for i in tqdm(range(len(data))):
         # Get video trails
         video_views = data[i]["viewed"][2:-2].split("\", \"")
         for video_id in video_views:
-            if video_id in video_ids.keys():
-                input_data.append(video_ids[video_id])
-                mask_data.append(1)
+            # if video_id in video_ids.keys():
+            input_data.append(video_ids[video_id])
+            mask_data.append(1)
 
         # Append -1 if the length of trail is smaller than max_trail_len
         if len(input_data) < max_trail_len:
