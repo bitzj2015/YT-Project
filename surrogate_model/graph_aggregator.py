@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from Attention import Attention
+from attention import Attention
 from tqdm import tqdm
 import numpy as np
 

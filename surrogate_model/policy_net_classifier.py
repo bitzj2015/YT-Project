@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import time 
 
 class PolicyNetClassifier(torch.nn.Module):
     def __init__(self, emb_dim, hidden_dim, video_embeddings, num_videos=127085):
@@ -25,7 +26,6 @@ class PolicyNetClassifier(torch.nn.Module):
         # inputs = self.video_embeddings(inputs.tolist())
         # inputs = torch.reshape(inputs, (batch_size, seq_len, self.emb_dim))
         # print(inputs.size())
-
         batch_size, seq_len = inputs.shape
         inputs = inputs * mask
         inputs = self.video_embeddings(inputs.reshape(-1).tolist(), with_graph).reshape(batch_size, seq_len, self.emb_dim)
@@ -43,6 +43,7 @@ class PolicyNetClassifier(torch.nn.Module):
         # print(outputs.size(), label.size())
         logits = torch.gather(F.log_softmax(outputs, -1), -1, label)
 
+
         # for i in range(len(mask)):
         #     for j in range(sum(mask[i])):
         #         label_type[i][j] *=0
@@ -53,7 +54,6 @@ class PolicyNetClassifier(torch.nn.Module):
         logits = mask * label_type * logits
         logits = logits.mean(2) # / (label_type.sum(2) + 1e-10)
         logits = logits.mean(1)
-
 
         _, rec_outputs = torch.topk(F.softmax(outputs, -1), k=100, dim=-1)
         rec_outputs = rec_outputs.tolist()
@@ -79,5 +79,5 @@ class PolicyNetClassifier(torch.nn.Module):
                     last_count += num_rec
                     # print(label[i][j][:num_rec],rec_outputs[i][j][:num_rec])
             # break
-        
+
         return -logits, acc/count, count, last_acc/last_count, last_count

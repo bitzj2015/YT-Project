@@ -4,6 +4,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from dataset import YTDataset, ToTensor
+from tqdm import tqdm
+import time
 torch.manual_seed(0)
 
 def load_metadata(
@@ -51,19 +53,22 @@ def load_dataset(
         return None, None
 
 def run_epoch(model, dataloader, mode="train", optimizer=None, ep=0, stat=None, logger=None, use_graph=False):
-    for i, batch in enumerate(dataloader):
+    for i, batch in tqdm(enumerate(dataloader)):
         # Get data
         input, label, label_type, mask = batch["input"], batch["label"], batch["label_type"], batch["mask"]
         logger.debug(input.size(), label.size(), label_type.size(), mask.size())
 
         if mode == "train":
             # Forward computation and back propagation
+            start_time = time.time()
             model.train()
             optimizer.zero_grad()
             loss, acc, count, last_acc, last_count = model(input,label,label_type,mask, with_graph=use_graph)
+            print("forward:", time.time()-start_time)
             loss = loss.mean(0)
             loss.backward()
             optimizer.step()
+            print("backward:", time.time()-start_time)
         else:
             # Forward computation 
             model.eval()
