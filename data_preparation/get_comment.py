@@ -16,7 +16,7 @@ def get_comments(video_id_list: list):
     for video_id in tqdm(video_id_list):
         try:
             # youtube-comment-downloader
-            subprocess.run(["./downloader.py", "--youtubeid", video_id, "--output", f"./comments/{video_id}.json"], stdout=subprocess.PIPE).stdout
+            subprocess.run(["./downloader_comments.py", "--youtubeid", video_id, "--output", f"./comments/{video_id}.json"], stdout=subprocess.PIPE).stdout
         except:
             continue
 
