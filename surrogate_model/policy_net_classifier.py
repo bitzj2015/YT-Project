@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import time 
 
 class PolicyNetClassifier(torch.nn.Module):
     def __init__(self, emb_dim, hidden_dim, video_embeddings, num_videos=127085):

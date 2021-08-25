@@ -28,7 +28,7 @@ args = parser.parse_args()
 
 logging.basicConfig(
     filename="./logs/log_train_classifier_{}.txt".format(args.version),
-    filemode='w',
+    filemode='a',
     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
     datefmt='%H:%M:%S',
     level=logging.INFO
