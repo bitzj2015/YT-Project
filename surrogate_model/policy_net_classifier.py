@@ -12,9 +12,10 @@ home_video_id_sorted = [int(key) for key in home_video_id_sorted.keys()]
 
 
 class PolicyNetClassifier(torch.nn.Module):
-    def __init__(self, emb_dim, hidden_dim, video_embeddings, num_videos=127085):
+    def __init__(self, emb_dim, hidden_dim, video_embeddings, num_videos=127085, device="cpu"):
         super(PolicyNetClassifier,self).__init__()
 
+        self.device = device
         self.lstm = nn.LSTM(
             input_size=emb_dim,
             hidden_size=hidden_dim,
@@ -22,11 +23,11 @@ class PolicyNetClassifier(torch.nn.Module):
             bidirectional=False,
             dropout=0.2,
             batch_first=True
-        )
-        self.linear = nn.Linear(hidden_dim, num_videos)
+        ).to(self.device)
+        self.linear = nn.Linear(hidden_dim, num_videos).to(self.device)
         self.video_embeddings = video_embeddings # num_videos * emb_dim
         self.emb_dim = emb_dim
-        self.relu = nn.ReLU()
+        self.relu = nn.ReLU().to(self.device)
         self.train()
 
     def forward(self, inputs, label, label_type, mask, topk=-1, with_graph=False):
@@ -52,16 +53,16 @@ class PolicyNetClassifier(torch.nn.Module):
         logits = torch.gather(F.log_softmax(outputs, -1), -1, label)
 
 
-        # for i in range(len(mask)):
-        #     for j in range(sum(mask[i])):
-        #         label_type[i][j] *=0
-        #         label_type[i][j][0] = 1
+        for i in range(len(mask)):
+            for j in range(sum(mask[i]) - 1):
+                label_type[i][j] *=0
+                # label_type[i][j][0] = 1
         # logits = torch.gather(F.log_softmax(outputs, -1), -1, label)
         
         # Get softmax and logits
         logits = mask * label_type * logits
         logits = logits.mean(2) # / (label_type.sum(2) + 1e-10)
-        logits = logits.mean(1)
+        logits = logits.sum(1)
 
         if topk == -1:
             _, rec_outputs = torch.topk(F.softmax(outputs, -1), k=100, dim=-1)

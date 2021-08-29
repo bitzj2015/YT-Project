@@ -37,6 +37,6 @@ class GraphEncoder(nn.Module):
             # Fully-connected neural network
             combined = F.relu(self.linear1(combined))
         else:
-            combined = self.video_embeddings[video_nodes]
+            combined = self.video_embeddings[video_nodes].to(self.device)
 
         return combined

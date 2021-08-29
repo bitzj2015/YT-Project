@@ -80,7 +80,8 @@ policy_net = PolicyNetClassifier(
     emb_dim=emb_dim,
     hidden_dim=128,
     video_embeddings=video_graph_embeddings,
-    num_videos=video_embeddings.shape[0]
+    num_videos=video_embeddings.shape[0],
+    device=device
 )
 
 
