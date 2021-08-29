@@ -50,7 +50,11 @@ class PolicyNetClassifier(torch.nn.Module):
         # batch_size * seq_len * num_videos
         label = label.long()
         # print(outputs.size(), label.size())
+        label = label.to(self.device)
+        label_type = label_type.to(self.device)
+        mask = mask.to(self.device)
         logits = torch.gather(F.log_softmax(outputs, -1), -1, label)
+        
 
 
         for i in range(len(mask)):
