@@ -1,6 +1,15 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import json
+import numpy as np
+
+USE_RAND = 2
+
+with open("../dataset/home_video_id_sorted.json", "r") as json_file:
+    home_video_id_sorted = json.load(json_file)
+home_video_id_sorted = [int(key) for key in home_video_id_sorted.keys()]
+
 
 class PolicyNetClassifier(torch.nn.Module):
     def __init__(self, emb_dim, hidden_dim, video_embeddings, num_videos=127085):
@@ -20,7 +29,7 @@ class PolicyNetClassifier(torch.nn.Module):
         self.relu = nn.ReLU()
         self.train()
 
-    def forward(self, inputs, label, label_type, mask, with_graph=False):
+    def forward(self, inputs, label, label_type, mask, topk=-1, with_graph=False):
         # inputs = torch.reshape(inputs, (-1,))
         # inputs = self.video_embeddings(inputs.tolist())
         # inputs = torch.reshape(inputs, (batch_size, seq_len, self.emb_dim))
@@ -54,8 +63,17 @@ class PolicyNetClassifier(torch.nn.Module):
         logits = logits.mean(2) # / (label_type.sum(2) + 1e-10)
         logits = logits.mean(1)
 
-        _, rec_outputs = torch.topk(F.softmax(outputs, -1), k=100, dim=-1)
-        rec_outputs = rec_outputs.tolist()
+        if topk == -1:
+            _, rec_outputs = torch.topk(F.softmax(outputs, -1), k=100, dim=-1)
+        else:
+            _, rec_outputs = torch.topk(F.softmax(outputs, -1), k=topk, dim=-1)
+        
+        if USE_RAND == 0:
+            rec_outputs = np.random.choice(home_video_id_sorted, rec_outputs.size())
+        elif USE_RAND == 1:
+            rec_outputs = np.random.choice(home_video_id_sorted[:100], rec_outputs.size())
+        else:
+            rec_outputs = rec_outputs.tolist()
         label = label.tolist()
         label_type = label_type.tolist()
         mask = mask.squeeze(2).tolist()
@@ -66,9 +84,12 @@ class PolicyNetClassifier(torch.nn.Module):
         for i in range(len(mask)):
             for j in range(sum(mask[i])):
                 num_rec = sum(label_type[i][j])
-                label_map = dict(zip(label[i][j][:num_rec], [0 for _ in range(num_rec)]))
+                if topk == -1:
+                    label_map = dict(zip(rec_outputs[i][j][:num_rec], [0 for _ in range(num_rec)]))
+                else:
+                    label_map = dict(zip(rec_outputs[i][j], [0 for _ in range(len(rec_outputs[i][j]))]))
                 for k in range(num_rec):
-                    if rec_outputs[i][j][k] in label_map.keys():
+                    if label[i][j][k] in label_map.keys():
                         acc += 1
                         if j == sum(mask[i]) - 1:
                             last_acc += 1

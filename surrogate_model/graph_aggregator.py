@@ -17,9 +17,9 @@ class GraphAggregator(nn.Module):
         self.emb_dim = emb_dim
         self.add_edge = add_edge
         if self.add_edge:
-            self.att = Attention(self.emb_dim + 1, self.emb_dim)
+            self.att = Attention(self.emb_dim + 1, self.emb_dim).to(self.device)
         else:
-            self.att = Attention(self.emb_dim, self.emb_dim)
+            self.att = Attention(self.emb_dim, self.emb_dim).to(self.device)
         # self.att_neigh = nn.Linear(self.emb_dim, 1)
         # self.att_node = nn.Linear(self.emb_dim, 1)
 
@@ -57,7 +57,7 @@ class GraphAggregator(nn.Module):
             # att_w = torch.tanh(neigh_video_emb+video_emb)
 
             # Use attention layer to get the neighborhood embedding
-            att_w = self.att(neigh_video_emb, video_emb, num_video_neighs)
+            att_w = self.att(neigh_video_emb.to(self.device), video_emb.to(self.device), num_video_neighs)
             att_history = torch.matmul(self.video_embeddings[list(video_neighs)].t(), att_w).t()
 
             # Store the neighborhood embedding

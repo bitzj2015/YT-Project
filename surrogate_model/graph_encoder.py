@@ -30,7 +30,6 @@ class GraphEncoder(nn.Module):
 
             # Get the embedding of each video node
             self_feats = self.video_embeddings[video_nodes].to(self.device)
-            self_feats = self_feats
             
             # Combine the embedding and neighborhood embedding of each video node
             combined = torch.cat([self_feats, neigh_feats], dim=1)

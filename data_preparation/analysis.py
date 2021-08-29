@@ -74,3 +74,10 @@ plt.xlabel("No. of occurance time (in log_10)")
 plt.ylabel("cdf")
 plt.title("No. homepage videos: {}.".format(len(home_video_id.keys())))
 plt.savefig(f"./fig/home_vidoes{VERSION}.png")
+
+with open("../dataset/video_ids_new.json", "r") as json_file:
+    video_ids = json.load(json_file)
+
+home_video_id_sorted = {video_ids[k]: v for k, v in sorted(home_video_id.items(), key=lambda item: item[1], reverse=True)}
+with open("../dataset/home_video_id_sorted.json", "w") as json_file:
+    json.dump(home_video_id_sorted, json_file)

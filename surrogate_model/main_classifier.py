@@ -11,7 +11,7 @@ torch.manual_seed(0)
 
 parser = argparse.ArgumentParser(description='run classifier.')
 parser.add_argument('--video-emb', dest="video_emb_path", type=str, default="../dataset/video_embeddings_new.hdf5")
-parser.add_argument('--video-graph', dest="video_graph_path", type=str, default="../dataset/video_adj_list.json")
+parser.add_argument('--video-graph', dest="video_graph_path", type=str, default="../dataset/video_adj_list_new.json")
 parser.add_argument('--video-id', dest="video_id_path", type=str, default="../dataset/video_ids_new.json")
 parser.add_argument('--train-data', dest="train_data_path", type=str, default="../dataset/train_data_new.hdf5")
 parser.add_argument('--test-data', dest="test_data_path", type=str, default="../dataset/test_data_new.hdf5")
@@ -23,6 +23,7 @@ parser.add_argument('--add-edge', dest="add_edge", default=False, action='store_
 parser.add_argument('--eval', dest="eval", default=False, action='store_true')
 parser.add_argument('--version', dest="version", type=str, default="test")
 parser.add_argument('--pretrain', dest="pretrain", type=str, default="./param/policy_with_graph_lstm.pt")
+parser.add_argument("--topk", dest="topk", type=int, default=-1, help="topk=-1: calculate accuracy; topk>1, calculate hit rate@topk")
 args = parser.parse_args()
 
 
