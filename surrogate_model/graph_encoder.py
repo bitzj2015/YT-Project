@@ -13,7 +13,7 @@ class GraphEncoder(nn.Module):
         self.aggregator = aggregator
         self.emb_dim = emb_dim
         self.device = device
-        self.linear1 = nn.Linear(2 * self.emb_dim, self.emb_dim)
+        self.linear1 = nn.Linear(2 * self.emb_dim, self.emb_dim).to(self.device)
 
     def forward(self, video_nodes, with_graph=True):
 

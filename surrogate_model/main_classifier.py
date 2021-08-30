@@ -111,7 +111,10 @@ else:
         "train_acc": 0, "train_count": 0, "train_last_acc": 0, "train_last_count": 0, "train_loss": 0,
         "test_acc": 0, "test_count": 0, "test_last_acc": 0, "test_last_count": 0, "test_loss": 0
     }
-    policy_net = torch.load(args.pretrain)
+    policy_net = torch.load(args.pretrain, map_location=device)
+    policy_net.device = device
+    policy_net.video_embeddings.device = device
+    policy_net.video_embeddings.aggregator.device = device
     logger.info("load model")
     # Testing
     stat = run_epoch(model=policy_net, dataloader=test_loader, mode="test", optimizer=optimizer, ep=0, stat=stat, logger=logger, use_graph=args.use_graph)

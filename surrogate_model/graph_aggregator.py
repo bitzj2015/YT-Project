@@ -58,7 +58,7 @@ class GraphAggregator(nn.Module):
 
             # Use attention layer to get the neighborhood embedding
             att_w = self.att(neigh_video_emb.to(self.device), video_emb.to(self.device), num_video_neighs)
-            att_history = torch.matmul(self.video_embeddings[list(video_neighs)].t(), att_w).t()
+            att_history = torch.matmul(self.video_embeddings[list(video_neighs)].t().to(self.device), att_w).t()
 
             # Store the neighborhood embedding
             embed_matrix[i] = att_history.squeeze(0)

@@ -30,7 +30,7 @@ class PolicyNetClassifier(torch.nn.Module):
         self.relu = nn.ReLU().to(self.device)
         self.train()
 
-    def forward(self, inputs, label, label_type, mask, topk=-1, with_graph=False):
+    def forward(self, inputs, label, label_type, mask, topk=500, with_graph=False):
         # inputs = torch.reshape(inputs, (-1,))
         # inputs = self.video_embeddings(inputs.tolist())
         # inputs = torch.reshape(inputs, (batch_size, seq_len, self.emb_dim))
@@ -76,7 +76,7 @@ class PolicyNetClassifier(torch.nn.Module):
         if USE_RAND == 0:
             rec_outputs = np.random.choice(home_video_id_sorted, rec_outputs.size())
         elif USE_RAND == 1:
-            rec_outputs = np.random.choice(home_video_id_sorted[:100], rec_outputs.size())
+            rec_outputs = np.random.choice(home_video_id_sorted[:500], rec_outputs.size())
         else:
             rec_outputs = rec_outputs.tolist()
         label = label.tolist()
@@ -96,13 +96,16 @@ class PolicyNetClassifier(torch.nn.Module):
                 for k in range(num_rec):
                     if label[i][j][k] in label_map.keys():
                         acc += 1
+                        label_map[label[i][j][k]] += 1
                         if j == sum(mask[i]) - 1:
                             last_acc += 1
                             # print(rec_outputs[i][j][k], inputs[i][j])
                 count += num_rec
                 if j == sum(mask[i]) - 1:
                     last_count += num_rec
-                    # print(label[i][j][:num_rec],rec_outputs[i][j][:num_rec])
+                    print("hhh")
+                    print(label_map)
+                    print(label[i][j][:num_rec],rec_outputs[i][j][:num_rec])
             # break
 
         return -logits, acc/count, count, last_acc/last_count, last_count
