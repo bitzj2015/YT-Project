@@ -5,7 +5,7 @@ import numpy as np
 from constants import *
 
 class PolicyNetRegression(torch.nn.Module):
-    def __init__(self, emb_dim, hidden_dim, video_embeddings, graph_embeddings, device="cpu"):
+    def __init__(self, emb_dim, hidden_dim, graph_embeddings, video_embeddings, device="cpu"):
         super(PolicyNetRegression,self).__init__()
 
         self.device = device
@@ -21,30 +21,32 @@ class PolicyNetRegression(torch.nn.Module):
         self.graph_embeddings = graph_embeddings
         self.video_embeddings = video_embeddings.to(self.device) # num_videos * emb_dim
         self.emb_dim = emb_dim
+        self.tanh = nn.Tanh().to(self.device)
         self.train()
 
-    def forward(self, inputs, label, label_type, mask, topk=-1, with_graph=False):
+    def forward(self, inputs, label, label_type, mask, topk=1000, with_graph=False):
 
         batch_size, seq_len = inputs.shape
+        inputs = inputs * mask
         inputs = self.graph_embeddings(inputs.reshape(-1).tolist(), with_graph).reshape(batch_size, seq_len, self.emb_dim)
         mask = mask.unsqueeze(2)
+
         label = label.to(self.device)
         label_type = label_type.to(self.device)
         mask = mask.to(self.device)
-        inputs = inputs * mask
 
         # batch_size * seq_len * emb_dim -> batch_size * seq_len * hidden_dim
         outputs, _ = self.lstm(inputs)
 
         # batch_size * seq_len * hidden_dim -> batch_size * seq_len * 1 * emb_dim
-        outputs = torch.tanh(self.linear(outputs)).unsqueeze(2)
+        outputs = self.tanh(self.linear(outputs)).unsqueeze(2)
 
         # batch_size * seq_len * emb_dim * num_videos
         label = label.long()
         batch_size, seq_len, label_len = label.shape
         sample_embedding = self.video_embeddings[label.reshape(-1).tolist()].reshape(batch_size, seq_len, label_len, self.emb_dim)
         sample_embedding = sample_embedding.permute(0,1,3,2)
-
+        print(outputs.size(), sample_embedding.size(), sample_embedding.requires_grad)
         # (batch_size * seq_len * 1 * emb_dim) * (batch_size * seq_len * emb_dim * label_len) -> batch_size * seq_len * 1 * label_len
         logits = torch.matmul(outputs, sample_embedding) / ((torch.norm(outputs, dim=3).unsqueeze(3) * torch.norm(sample_embedding, dim=2).unsqueeze(2)) + 1e-10)
         logits = logits.squeeze(2)
@@ -91,17 +93,19 @@ class PolicyNetRegression(torch.nn.Module):
                     # print(label_map, num_rec)
                     # print(label[i][j][:num_rec],rec_outputs[i][j][:num_rec])
         
+        logits_mask  = mask.clone()
         for i in range(len(mask)):
             for j in range(sum(mask[i]) - 1):
-                mask[i][j] *= 0
-        mask = mask.unsqueeze(2)
+                logits_mask[i][j] *= 0
+
+        logits_mask = logits_mask.unsqueeze(2)
         
         # Get softmax and logits
-        loss_neg = mask * (1-label_type) * logits
+        loss_neg = logits_mask * (1-label_type) * logits
         loss_neg = loss_neg.sum(2) / ((1-label_type).sum(2) + 1e-10)
         loss_neg = loss_neg.sum(1)
 
-        loss_pos = mask * label_type * (1-logits)
+        loss_pos = logits_mask * label_type * (1-logits)
         loss_pos = loss_pos.sum(2) / (label_type.sum(2) + 1e-10)
         loss_pos = loss_pos.sum(1)
         
