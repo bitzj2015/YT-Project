@@ -96,10 +96,10 @@ if args.eval == False:
         }
 
         # Training
-        stat = run_epoch(model=policy_net, dataloader=train_loader, mode="train", optimizer=optimizer, ep=ep, stat=stat, logger=logger, use_graph=args.use_graph)
+        stat = run_classifier_epoch(model=policy_net, dataloader=train_loader, mode="train", optimizer=optimizer, ep=ep, stat=stat, logger=logger, use_graph=args.use_graph)
 
         # Testing
-        stat = run_epoch(model=policy_net, dataloader=test_loader, mode="test", optimizer=optimizer, ep=ep, stat=stat, logger=logger, use_graph=args.use_graph)
+        stat = run_classifier_epoch(model=policy_net, dataloader=test_loader, mode="test", optimizer=optimizer, ep=ep, stat=stat, logger=logger, use_graph=args.use_graph)
 
         # Save model
         if stat["test_acc"] > best_acc:
@@ -117,6 +117,6 @@ else:
     policy_net.video_embeddings.aggregator.device = device
     logger.info("load model")
     # Testing
-    stat = run_epoch(model=policy_net, dataloader=test_loader, mode="test", optimizer=optimizer, ep=0, stat=stat, logger=logger, use_graph=args.use_graph)
+    stat = run_classifier_epoch(model=policy_net, dataloader=test_loader, mode="test", optimizer=optimizer, ep=0, stat=stat, logger=logger, use_graph=args.use_graph)
 
 

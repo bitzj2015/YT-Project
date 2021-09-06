@@ -1,19 +1,35 @@
-import os
-import h5py
-import json
 import torch
-import numpy as np
-from Social_Encoders import *
-from Social_Aggregators import *
-from Policy_Net import *
-from torch.utils.data import DataLoader
-from dataset import YTDataset, ToTensor
+from graph_encoder import GraphEncoder
+from graph_aggregator import GraphAggregator
+from policy_net_regression import PolicyNetRegression
+from utils import *
 import torch.optim as optim
 import logging
+import argparse
+torch.manual_seed(0)
+
+
+parser = argparse.ArgumentParser(description='run regression.')
+parser.add_argument('--video-emb', dest="video_emb_path", type=str, default="../dataset/video_embeddings_new.hdf5")
+parser.add_argument('--video-graph', dest="video_graph_path", type=str, default="../dataset/video_adj_list_new.json")
+parser.add_argument('--video-id', dest="video_id_path", type=str, default="../dataset/video_ids_new.json")
+parser.add_argument('--train-data', dest="train_data_path", type=str, default="../dataset/train_data_new.hdf5")
+parser.add_argument('--test-data', dest="test_data_path", type=str, default="../dataset/test_data_new.hdf5")
+parser.add_argument('--ep', dest="epoch", type=int, default=30)
+parser.add_argument('--bs', dest="batch_size", type=int, default=256)
+parser.add_argument('--lr', dest="lr", type=float, default=0.001)
+parser.add_argument('--use-graph', dest="use_graph", default=False, action='store_true')
+parser.add_argument('--add-edge', dest="add_edge", default=False, action='store_true')
+parser.add_argument('--eval', dest="eval", default=False, action='store_true')
+parser.add_argument('--version', dest="version", type=str, default="test")
+parser.add_argument('--pretrain', dest="pretrain", type=str, default="./param/policy_with_graph_lstm.pt")
+parser.add_argument("--topk", dest="topk", type=int, default=-1, help="topk=-1: calculate accuracy; topk>1, calculate hit rate@topk")
+args = parser.parse_args()
+
 
 logging.basicConfig(
-    filename="./logs/log_train3.txt",
-    filemode='w',
+    filename="./logs/log_train_regression_{}.txt".format(args.version),
+    filemode='a',
     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
     datefmt='%H:%M:%S',
     level=logging.INFO
@@ -21,82 +37,86 @@ logging.basicConfig(
 logger=logging.getLogger() 
 logger.setLevel(logging.INFO) 
 
-VERSION = "_new"
 
-hf_emb = h5py.File(f"../dataset/video_embeddings{VERSION}.hdf5", "r")
-video_embeddings = hf_emb["embeddings"][:]
-video_ids = hf_emb["video_ids"][:]
-video_ids = [video_id.decode('utf-8') for video_id in video_ids]
+video_embeddings, video_graph_adj_mat, video_ids_map, num_videos, emb_dim = load_metadata(
+    video_emb_path=args.video_emb_path,
+    video_graph_path=args.video_graph_path,
+    video_id_path=args.video_id_path,
+    logger=logger
+)
+print(video_embeddings.shape[0])
 
-with open("../dataset/video_adj_list.json", "r") as json_file:
-    video_graph_adj_mat = json.load(json_file)
-num_videos = len(video_graph_adj_mat.keys())
-print("No. of videos: {}".format(num_videos))
+train_loader, test_loader = load_dataset(
+    train_data_path=args.train_data_path,
+    test_data_path=args.test_data_path,
+    batch_size=args.batch_size,
+    logger=logger
+)
 
-with open(f"../dataset/video_ids{VERSION}.json", "r") as json_file:
-    video_ids_map = json.load(json_file)
-
-# print(video_ids_map[video_ids[1000]])
-
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 use_cuda = False
 if torch.cuda.is_available():
     use_cuda = True
-
-embed_dim = np.shape(video_embeddings)[1]
-print("video embedding dimension: {}".format(embed_dim))
-
 device = torch.device("cuda" if use_cuda else "cpu")
+
+
 video_embeddings = torch.from_numpy(video_embeddings)
-agg_video_graph = Social_Aggregator(
+
+agg_video_graph = GraphAggregator(
     video_embeddings=video_embeddings, 
-    embed_dim=embed_dim, 
+    emb_dim=emb_dim, 
+    add_edge=args.add_edge,
     device=device
 )
 
-video_graph_embeddings = Social_Encoder(
+video_graph_embeddings = GraphEncoder(
     video_embeddings=video_embeddings, 
-    embed_dim=embed_dim, 
+    emb_dim=emb_dim, 
     video_graph_adj_mat=video_graph_adj_mat, 
     aggregator=agg_video_graph,
     device=device
 )
-# video_embeddings = video_graph_embeddings([i for i in range(num_videos)])
 
-policy_net = PolicyNet(
-    embed_dim=embed_dim,
-    hidden_dim=12800,
-    video_embeddings=video_graph_embeddings
+policy_net = PolicyNetRegression(
+    emb_dim=emb_dim,
+    hidden_dim=128,
+    graph_embeddings=video_graph_embeddings,
+    video_embeddings=video_embeddings,
+    device=device
 )
 
-train_hf = h5py.File(f"../dataset/train_data{VERSION}.hdf5", "r")
-test_hf = h5py.File(f"../dataset/test_data{VERSION}.hdf5", "r")
-batch_size = 256
 
-train_dataset = YTDataset(train_hf["input"], train_hf["label"], train_hf["label_type"], train_hf["mask"], transform=ToTensor())
-test_dataset = YTDataset(test_hf["input"], test_hf["label"], test_hf["label_type"], test_hf["mask"], transform=ToTensor())
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-optimizer = optim.Adam(policy_net.parameters(), lr=0.001)
-for ep in range(30):
-    for i, batch in enumerate(train_loader):
-        input, label, label_type, mask = batch["input"], batch["label"], batch["label_type"], batch["mask"]
-        # print(input.size(), label.size(), label_type.size(), mask.size())
-        optimizer.zero_grad()
-        loss, loss_, _ = policy_net(input,label,label_type,mask)
-        loss = loss.mean(0)
-        loss_ = loss_.mean(0)
-        # print(loss)
-        (loss+loss_).backward()
-        optimizer.step()
-        logger.info("Training, ep: {}, step: {}, loss: {}, loss_: {}.".format(ep, i, loss.item(), loss_.item()))
-    
-    policy_net_ = policy_net.eval()
-    for i, batch in enumerate(test_loader):
-        input, label, label_type, mask = batch["input"], batch["label"], batch["label_type"], batch["mask"]
-        # print(input.size(), label.size(), label_type.size(), mask.size())
-        loss, loss_, _ = policy_net_(input,label,label_type,mask)
-        loss = loss.mean(0)
-        loss_ = loss_.mean(0)
-        logger.info("Testing, ep: {}, step: {}, loss: {}, loss_: {}.".format(ep, i, loss.item(), loss_.item()))
+optimizer = optim.Adam(policy_net.parameters(), lr=args.lr)
+best_acc = 0
+if args.eval == False:
+    for ep in range(args.epoch):
+        # State tracker
+        stat = {
+            "train_last_acc": 0, "train_last_count": 0, "train_loss_pos": 0, "train_loss_neg": 0, 
+            "test_last_acc": 0, "test_last_count": 0, "test_loss_pos": 0, "test_loss_neg": 0
+        }
+
+        # Training
+        stat = run_regression_epoch(model=policy_net, dataloader=train_loader, mode="train", optimizer=optimizer, ep=ep, stat=stat, logger=logger, use_graph=args.use_graph)
+
+        # Testing
+        stat = run_regression_epoch(model=policy_net, dataloader=test_loader, mode="test", optimizer=optimizer, ep=ep, stat=stat, logger=logger, use_graph=args.use_graph)
+
+        # Save model
+        if stat["test_acc"] > best_acc:
+            best_acc = stat["test_acc"]
+            torch.save(policy_net, "./param/policy_{}.pt".format(args.version))
+else:
+    # State tracker
+    stat = {
+        "train_last_acc": 0, "train_last_count": 0, "train_loss_pos": 0, "train_loss_neg": 0, 
+        "test_last_acc": 0, "test_last_count": 0, "test_loss_pos": 0, "test_loss_neg": 0
+    }
+    policy_net = torch.load(args.pretrain, map_location=device)
+    policy_net.device = device
+    policy_net.video_embeddings.device = device
+    policy_net.video_embeddings.aggregator.device = device
+    logger.info("load model")
+    # Testing
+    stat = run_regression_epoch(model=policy_net, dataloader=test_loader, mode="test", optimizer=optimizer, ep=0, stat=stat, logger=logger, use_graph=args.use_graph)
+
 
