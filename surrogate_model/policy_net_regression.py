@@ -20,6 +20,7 @@ class PolicyNetRegression(torch.nn.Module):
         self.linear = nn.Linear(hidden_dim, emb_dim).to(self.device)
         self.graph_embeddings = graph_embeddings
         self.video_embeddings = video_embeddings.to(self.device) # num_videos * emb_dim
+        self.vb_norm = torch.norm(self.video_embeddings, dim=1).reshape(1,1,1,-1)
         self.emb_dim = emb_dim
         self.tanh = nn.Tanh().to(self.device)
         self.train()
@@ -46,12 +47,14 @@ class PolicyNetRegression(torch.nn.Module):
         batch_size, seq_len, label_len = label.shape
         sample_embedding = self.video_embeddings[label.reshape(-1).tolist()].reshape(batch_size, seq_len, label_len, self.emb_dim)
         sample_embedding = sample_embedding.permute(0,1,3,2)
-        print(outputs.size(), sample_embedding.size(), sample_embedding.requires_grad)
+        # print(outputs.size(), sample_embedding.size(), sample_embedding.requires_grad)
         # (batch_size * seq_len * 1 * emb_dim) * (batch_size * seq_len * emb_dim * label_len) -> batch_size * seq_len * 1 * label_len
-        logits = torch.matmul(outputs, sample_embedding) / ((torch.norm(outputs, dim=3).unsqueeze(3) * torch.norm(sample_embedding, dim=2).unsqueeze(2)) + 1e-10)
-        logits = logits.squeeze(2)
+        # logits = torch.matmul(outputs, sample_embedding) / ((torch.norm(outputs, dim=3).unsqueeze(3) * torch.norm(sample_embedding, dim=2).unsqueeze(2)) + 1e-10)
+        # logits = logits.squeeze(2)
 
-        outputs = torch.matmul(outputs, self.video_embeddings.t()).squeeze(2)
+        outputs = torch.matmul(outputs, self.video_embeddings.t()) / ((torch.norm(outputs, dim=3).unsqueeze(3) * self.vb_norm) + 1e-10)
+        outputs = outputs.squeeze(2)
+        logits = torch.gather(outputs, -1, label)
         
         # Get accuracy
         if topk == -1:
@@ -101,8 +104,8 @@ class PolicyNetRegression(torch.nn.Module):
         logits_mask = logits_mask.unsqueeze(2)
         
         # Get softmax and logits
-        loss_neg = logits_mask * (1-label_type) * logits
-        loss_neg = loss_neg.sum(2) / ((1-label_type).sum(2) + 1e-10)
+        loss_neg = logits_mask * outputs
+        loss_neg = loss_neg.mean(2)
         loss_neg = loss_neg.sum(1)
 
         loss_pos = logits_mask * label_type * (1-logits)
