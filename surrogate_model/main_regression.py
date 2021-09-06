@@ -102,8 +102,8 @@ if args.eval == False:
         stat = run_regression_epoch(model=policy_net, dataloader=test_loader, mode="test", optimizer=optimizer, ep=ep, stat=stat, logger=logger, use_graph=args.use_graph)
 
         # Save model
-        if stat["test_acc"] > best_acc:
-            best_acc = stat["test_acc"]
+        if stat["test_last_acc"] > best_acc:
+            best_acc = stat["test_last_acc"]
             torch.save(policy_net, "./param/policy_{}.pt".format(args.version))
 else:
     # State tracker

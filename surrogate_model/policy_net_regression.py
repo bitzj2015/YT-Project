@@ -28,6 +28,9 @@ class PolicyNetRegression(torch.nn.Module):
         batch_size, seq_len = inputs.shape
         inputs = self.graph_embeddings(inputs.reshape(-1).tolist(), with_graph).reshape(batch_size, seq_len, self.emb_dim)
         mask = mask.unsqueeze(2)
+        label = label.to(self.device)
+        label_type = label_type.to(self.device)
+        mask = mask.to(self.device)
         inputs = inputs * mask
 
         # batch_size * seq_len * emb_dim -> batch_size * seq_len * hidden_dim
