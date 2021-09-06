@@ -24,7 +24,7 @@ class PolicyNetRegression(torch.nn.Module):
         self.tanh = nn.Tanh().to(self.device)
         self.train()
 
-    def forward(self, inputs, label, label_type, mask, topk=1000, with_graph=False):
+    def forward(self, inputs, label, label_type, mask, topk=-1, with_graph=False):
 
         batch_size, seq_len = inputs.shape
         inputs = inputs * mask
