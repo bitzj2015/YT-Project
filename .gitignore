@@ -142,3 +142,4 @@ git/*
 tmp/*
 *.out
 *.pt
+*.job
