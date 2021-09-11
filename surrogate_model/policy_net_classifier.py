@@ -30,7 +30,7 @@ class PolicyNetClassifier(torch.nn.Module):
         self.relu = nn.ReLU().to(self.device)
         self.train()
 
-    def forward(self, inputs, label, label_type, mask, topk=1000, with_graph=False):
+    def forward(self, inputs, label, label_type, mask, topk=-1, with_graph=False):
         # inputs = torch.reshape(inputs, (-1,))
         # inputs = self.video_embeddings(inputs.tolist())
         # inputs = torch.reshape(inputs, (batch_size, seq_len, self.emb_dim))

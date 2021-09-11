@@ -46,7 +46,7 @@ video_embeddings, video_graph_adj_mat, video_ids_map, num_videos, emb_dim = load
 )
 print(video_embeddings.shape[0])
 
-train_loader, test_loader = load_dataset(
+train_loader, test_loader, val_loader = load_dataset(
     train_data_path=args.train_data_path,
     test_data_path=args.test_data_path,
     batch_size=args.batch_size,
@@ -99,7 +99,7 @@ if args.eval == False:
         stat = run_regression_epoch(model=policy_net, dataloader=train_loader, mode="train", optimizer=optimizer, ep=ep, stat=stat, logger=logger, use_graph=args.use_graph)
 
         # Testing
-        stat = run_regression_epoch(model=policy_net, dataloader=test_loader, mode="test", optimizer=optimizer, ep=ep, stat=stat, logger=logger, use_graph=args.use_graph)
+        stat = run_regression_epoch(model=policy_net, dataloader=val_loader, mode="test", optimizer=optimizer, ep=ep, stat=stat, logger=logger, use_graph=args.use_graph)
 
         # Save model
         if stat["test_last_acc"] > best_acc:

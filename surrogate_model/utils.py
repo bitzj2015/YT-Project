@@ -45,9 +45,14 @@ def load_dataset(
             train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
         with  h5py.File(test_data_path, "r") as test_hf:
-            test_dataset = YTDataset(test_hf["input"][:], test_hf["label"][:], test_hf["label_type"][:], test_hf["mask"][:], transform=ToTensor())
+            dataset = YTDataset(test_hf["input"][:], test_hf["label"][:], test_hf["label_type"][:], test_hf["mask"][:], transform=ToTensor())
+            dataset_size = len(dataset)
+            val_datset_size = int(0.5 * dataset_size)
+            test_dataset_size = dataset_size - val_dataset_size
+            test_dataset, val_dataset = torch.utils.data.random_split(dataset, [test_dataset_size, val_dataset_size], generator=torch.Generator().manual_seed(0))
             test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-        return train_loader, test_loader
+            val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+        return train_loader, test_loader, val_loader
     except:
         logger.error("Failed to load training and testing dataset.")
         return None, None

@@ -39,26 +39,30 @@ class GraphAggregator(nn.Module):
 
             # Get the number of neighborhood video nodes
             num_video_neighs = len(video_neighs)
-
-            # Get the embeddings of neighborhood video nodes
-            if self.add_edge:
-                video_neighs_weights = np.array([int(idx) for idx in video_neighs_weights_list[i]]).astype("float32")
-                neigh_video_emb = torch.cat([self.video_embeddings[list(video_neighs)], torch.from_numpy(video_neighs_weights/100).unsqueeze(1)],axis=1)
+            if num_video_neighs > 0:
+                # Get the embeddings of neighborhood video nodes
+                if self.add_edge:
+                    video_neighs_weights = np.array([idx for idx in video_neighs_weights_list[i]]).astype("float32")
+                    neigh_video_emb = torch.cat([self.video_embeddings[list(video_neighs)], torch.from_numpy(video_neighs_weights).unsqueeze(1)],axis=1)
+                    video_emb = torch.cat([self.video_embeddings[video_nodes[i]], torch.from_numpy(np.array([1.0]).astype("float32"))],axis=0)
+                else:
+                    neigh_video_emb = self.video_embeddings[list(video_neighs)]
+                    video_emb = self.video_embeddings[video_nodes[i]]
+                # neigh_video_emb = att_neigh_embeddings[list(video_neighs)]
+    
+                # Get the embedding of current video node
+                # if self.add_edge:
+                #     video_emb = torch.cat([self.video_embeddings[video_nodes[i]], torch.from_numpy(np.array([0]))], axis=0)
+                # else:
+                # video_emb = self.video_embeddings[video_nodes[i]]
+                # video_emb = att_node_embeddings[video_nodes[i]].unsqueeze(0)
+                # att_w = torch.tanh(neigh_video_emb+video_emb)
+    
+                # Use attention layer to get the neighborhood embedding
+                att_w = self.att(neigh_video_emb.to(self.device), video_emb.to(self.device), num_video_neighs)
+                att_history = torch.matmul(self.video_embeddings[list(video_neighs)].t().to(self.device), att_w).t()
             else:
-                neigh_video_emb = self.video_embeddings[list(video_neighs)]
-            # neigh_video_emb = att_neigh_embeddings[list(video_neighs)]
-
-            # Get the embedding of current video node
-            # if self.add_edge:
-            #     video_emb = torch.cat([self.video_embeddings[video_nodes[i]], torch.from_numpy(np.array([0]))], axis=0)
-            # else:
-            video_emb = self.video_embeddings[video_nodes[i]]
-            # video_emb = att_node_embeddings[video_nodes[i]].unsqueeze(0)
-            # att_w = torch.tanh(neigh_video_emb+video_emb)
-
-            # Use attention layer to get the neighborhood embedding
-            att_w = self.att(neigh_video_emb.to(self.device), video_emb.to(self.device), num_video_neighs)
-            att_history = torch.matmul(self.video_embeddings[list(video_neighs)].t().to(self.device), att_w).t()
+                att_history = video_emb = self.video_embeddings[video_nodes[i]].to(self.device)
 
             # Store the neighborhood embedding
             embed_matrix[i] = att_history.squeeze(0)

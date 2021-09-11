@@ -140,4 +140,5 @@ dmypy.json
 logs/*
 git/*
 tmp/*
-
+*.out
+*.pt

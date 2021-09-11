@@ -40,8 +40,9 @@ def parse_recvideo(recvideo_file_list: list, video_ids: dict):
                         # the recvideo is not in our video candidates
                         continue
                     else:
-                        video_video_edge[video_id][recvideo_id] = 1
                         cnt += 1
+                        video_video_edge[video_id][recvideo_id] = 1 / cnt
+                        
             stat["avg_num_edges"].append(len(video_video_edge[video_id].keys()))
             stat["avg_hit_rate"].append(cnt/cnt_all)
         except:
@@ -70,15 +71,15 @@ video_video_edge = {}
 for res in results:
     video_video_edge.update(res)
 
-with open(f"../dataset/video_video_edge{VERSION}.json", "w") as json_file:
+with open(f"../dataset/video_video_edge{VERSION}_w.json", "w") as json_file:
     json.dump(video_video_edge, json_file)
 
 video_adj_list = dict(zip([i for i in range(len(video_ids.keys()))], [{} for _ in range(len(video_ids.keys()))]))
 for video_id in tqdm(video_video_edge.keys()):
     for recvideo_id in video_video_edge[video_id].keys():
-        video_adj_list[video_ids[video_id]][video_ids[recvideo_id]] = 1
+        video_adj_list[video_ids[video_id]][video_ids[recvideo_id]] = video_video_edge[video_id][recvideo_id]
 
-with open(f"../dataset/video_adj_list{VERSION}.json", "w") as json_file:
+with open(f"../dataset/video_adj_list{VERSION}_w.json", "w") as json_file:
     json.dump(video_adj_list, json_file)
 
 print(len(video_video_edge.keys()), len(video_adj_list.keys()))
