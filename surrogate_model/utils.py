@@ -47,11 +47,11 @@ def load_dataset(
         with  h5py.File(test_data_path, "r") as test_hf:
             dataset = YTDataset(test_hf["input"][:], test_hf["label"][:], test_hf["label_type"][:], test_hf["mask"][:], transform=ToTensor())
             dataset_size = len(dataset)
-            val_datset_size = int(0.5 * dataset_size)
+            val_dataset_size = int(0.5 * dataset_size)
             test_dataset_size = dataset_size - val_dataset_size
             test_dataset, val_dataset = torch.utils.data.random_split(dataset, [test_dataset_size, val_dataset_size], generator=torch.Generator().manual_seed(0))
-            test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-            val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+            test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+            val_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
         return train_loader, test_loader, val_loader
     except:
         logger.error("Failed to load training and testing dataset.")
@@ -110,7 +110,7 @@ def run_classifier_epoch(model, dataloader, mode="train", optimizer=None, ep=0, 
             start_time = time.time()
             model.train()
             optimizer.zero_grad()
-            loss, acc, count, last_acc, last_count = model(input, label, label_type, mask, with_graph=use_graph)
+            loss, acc, count, last_acc, last_count, last_rank = model(input, label, label_type, mask, with_graph=use_graph)
             print("forward:", time.time()-start_time)
             loss = loss.mean(0)
             loss.backward()
@@ -119,20 +119,22 @@ def run_classifier_epoch(model, dataloader, mode="train", optimizer=None, ep=0, 
         else:
             # Forward computation 
             model.eval()
-            loss, acc, count, last_acc, last_count = model(input, label, label_type, mask, with_graph=use_graph)
+            loss, acc, count, last_acc, last_count, last_rank = model(input, label, label_type, mask, with_graph=use_graph)
             loss = loss.mean(0)
             
         # Print training results
         stat[f"{mode}_acc"] += acc * count
         stat[f"{mode}_count"] += count
         stat[f"{mode}_last_acc"] += last_acc * last_count
+        stat[f"{mode}_last_rank"] += last_rank * last_count
         stat[f"{mode}_last_count"] += last_count
         stat[f"{mode}_loss"] += loss.item() * count
-        logger.info("{}ing, ep: {}, step: {}, loss: {}, acc: {}, home_acc: {}.".format(mode, ep, i, loss.item(), acc, last_acc))
+        logger.info("{}ing, ep: {}, step: {}, loss: {}, acc: {}, home_acc: {}, home_rank: {}.".format(mode, ep, i, loss.item(), acc, last_acc, last_rank))
     
     # Print final training results
     stat[f"{mode}_acc"] /= stat[f"{mode}_count"]
     stat[f"{mode}_last_acc"] /= stat[f"{mode}_last_count"]
+    stat[f"{mode}_last_rank"] /= stat[f"{mode}_last_count"]
     stat[f"{mode}_loss"] /= stat[f"{mode}_count"]
-    logger.info("End {}ing, ep: {}, loss: {}, acc: {}, home_acc: {}.".format(mode, ep, stat[f"{mode}_loss"], stat[f"{mode}_acc"], stat[f"{mode}_last_acc"]))
+    logger.info("End {}ing, ep: {}, loss: {}, acc: {}, home_acc: {}, home_rank: {}.".format(mode, ep, stat[f"{mode}_loss"], stat[f"{mode}_acc"], stat[f"{mode}_last_acc"], stat[f"{mode}_last_rank"]))
     return stat

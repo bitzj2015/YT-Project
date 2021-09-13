@@ -23,6 +23,7 @@ parser.add_argument('--add-edge', dest="add_edge", default=False, action='store_
 parser.add_argument('--eval', dest="eval", default=False, action='store_true')
 parser.add_argument('--version', dest="version", type=str, default="test")
 parser.add_argument('--pretrain', dest="pretrain", type=str, default="./param/policy_with_graph_lstm.pt")
+parser.add_argument("--use-rand", dest="use_rand", type=int, default=-1, help="-1: ML, 0: random, 1: biased")
 parser.add_argument("--topk", dest="topk", type=int, default=-1, help="topk=-1: calculate accuracy; topk>1, calculate hit rate@topk")
 args = parser.parse_args()
 
@@ -81,7 +82,9 @@ policy_net = PolicyNetClassifier(
     hidden_dim=128,
     video_embeddings=video_graph_embeddings,
     num_videos=video_embeddings.shape[0],
-    device=device
+    device=device,
+    use_rand=args.use_rand,
+    topk=args.topk
 )
 
 
@@ -91,8 +94,8 @@ if args.eval == False:
     for ep in range(args.epoch):
         # State tracker
         stat = {
-            "train_acc": 0, "train_count": 0, "train_last_acc": 0, "train_last_count": 0, "train_loss": 0,
-            "test_acc": 0, "test_count": 0, "test_last_acc": 0, "test_last_count": 0, "test_loss": 0
+            "train_acc": 0, "train_count": 0, "train_last_acc": 0, "train_last_count": 0, "train_last_rank": 0, "train_loss": 0,
+            "test_acc": 0, "test_count": 0, "test_last_acc": 0, "test_last_count": 0, "test_last_rank": 0, "test_loss": 0
         }
 
         # Training
@@ -108,10 +111,10 @@ if args.eval == False:
 else:
     # State tracker
     stat = {
-        "train_acc": 0, "train_count": 0, "train_last_acc": 0, "train_last_count": 0, "train_loss": 0,
-        "test_acc": 0, "test_count": 0, "test_last_acc": 0, "test_last_count": 0, "test_loss": 0
+        "train_acc": 0, "train_count": 0, "train_last_acc": 0, "train_last_count": 0, "train_last_rank": 0, "train_loss": 0,
+        "test_acc": 0, "test_count": 0, "test_last_acc": 0, "test_last_count": 0, "test_last_rank": 0, "test_loss": 0
     }
-    policy_net = torch.load(args.pretrain, map_location=device)
+    policy_net.load_state_dict(torch.load(args.pretrain, map_location=device).state_dict())
     policy_net.device = device
     policy_net.video_embeddings.device = device
     policy_net.video_embeddings.aggregator.device = device
