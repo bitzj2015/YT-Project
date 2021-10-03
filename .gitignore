@@ -143,3 +143,6 @@ tmp/*
 *.out
 *.pt
 *.job
+dataset/*
+*.png
+data_preparation/recvideos/*
