@@ -34,52 +34,52 @@ class PolicyNetClassifier(torch.nn.Module):
         self.train()
 
     def forward(self, inputs, label, label_type, mask, with_graph=False):
-        # inputs = torch.reshape(inputs, (-1,))
-        # inputs = self.video_embeddings(inputs.tolist())
-        # inputs = torch.reshape(inputs, (batch_size, seq_len, self.emb_dim))
-        # print(inputs.size())
+
         batch_size, seq_len = inputs.shape
         inputs = inputs * mask
         inputs = self.video_embeddings(inputs.reshape(-1).tolist(), with_graph).reshape(batch_size, seq_len, self.emb_dim)
         mask = mask.unsqueeze(2)
         
-
-        # batch_size * seq_len * emb_dim -> batch_size * seq_len * (2*hidden_dim)
-        outputs, _ = self.lstm(inputs)
-
-        # batch_size * seq_len * (2*hidden_dim) -> batch_size * seq_len * num_videos
-        outputs = self.relu(self.linear(outputs))
-
-        # batch_size * seq_len * num_videos
-        label = label.long()
-        # print(outputs.size(), label.size())
         label = label.to(self.device)
         label_type = label_type.to(self.device)
         mask = mask.to(self.device)
-        logits = torch.gather(F.log_softmax(outputs, -1), -1, label)
         
-
-
+        last_label = []
+        last_label_type = []
         for i in range(len(mask)):
-            for j in range(sum(mask[i]) - 1):
-                label_type[i][j] *=0
-                # label_type[i][j][0] = 1
-        # logits = torch.gather(F.log_softmax(outputs, -1), -1, label)
+            last_label.append(label[i][sum(mask[i]) - 1])
+            last_label_type.append(label_type[i][sum(mask[i]) - 1])
+        
+        last_label = torch.stack(last_label, dim=0).squeeze().long()
+        last_label_type = torch.stack(last_label_type, dim=0).squeeze().long()
+        print(last_label.shape)
+        batch_size, label_len = last_label.shape
+
+        # batch_size * seq_len * emb_dim -> batch_size * seq_len * hidden_dim
+        out, _ = self.lstm(inputs)
+        
+        outputs = []
+        for i in range(len(mask)):
+            outputs.append(out[i][sum(mask[i]) - 1])
+        outputs = torch.stack(outputs, dim=0).squeeze()
+
+        # batch_size * seq_len * (2*hidden_dim) -> batch_size * seq_len * num_videos
+        outputs = self.relu(self.linear(outputs))
+        logits = torch.gather(F.log_softmax(outputs, -1), -1, last_label)
         
         # Get softmax and logits
-        logits = mask * label_type * logits
-        logits = logits.mean(2) # / (label_type.sum(2) + 1e-10)
-        logits = logits.sum(1)
+        logits = last_label_type * logits
+        logits = logits.mean(1)
         
         # Calculate different metrics
-        _, rec_rank_all = torch.sort(F.softmax(outputs, -1), descending=True, dim=-1) #torch.topk(F.softmax(outputs, -1), k=self.num_videos, dim=-1)
+        # _, rec_rank_all = torch.sort(F.softmax(outputs, -1), descending=True, dim=-1) #torch.topk(F.softmax(outputs, -1), k=self.num_videos, dim=-1)
         # print(rec_rank_all.size())
         if self.topk == -1:
-            rec_outputs = rec_rank_all[:,:,:100]
+            _, rec_outputs = torch.topk(F.softmax(outputs, -1), k=100, dim=-1) # rec_rank_all[:,:,:100]
         else:
-            rec_outputs = rec_rank_all[:,:,:self.topk]
+            _, rec_outputs = torch.topk(F.softmax(outputs, -1), k=self.topk, dim=-1) # rec_rank_all[:,:,:self.topk]
         
-        
+        # print(rec_outputs)
         if self.use_rand == 0:
             rec_outputs = np.random.choice(home_video_id_sorted, rec_outputs.size())
         elif self.use_rand == 1:
@@ -87,39 +87,24 @@ class PolicyNetClassifier(torch.nn.Module):
         else:
             rec_outputs = rec_outputs.tolist()
             
-        label = label.tolist()
-        label_type = label_type.tolist()
-        mask = mask.squeeze(2).tolist()
-        count = 0
-        acc = 0
+        last_label = last_label.tolist()
+        last_label_type = last_label_type.tolist()
+        
         last_acc = 0
         last_count = 0
         last_avg_rank = 0
-        for i in range(len(mask)):
-            for j in range(sum(mask[i])):
-                num_rec = sum(label_type[i][j])
-                if self.topk == -1:
-                    label_map = dict(zip(rec_outputs[i][j][:num_rec], [0 for _ in range(num_rec)]))
-                else:
-                    label_map = dict(zip(rec_outputs[i][j], [0 for _ in range(len(rec_outputs[i][j]))]))
-                rank_map = dict(zip(rec_rank_all[i][j].tolist(), [k for k in range(len(rec_rank_all[i][j]))]))
-                
-                for k in range(num_rec):
-                    if j == sum(mask[i]) - 1:
-                        last_avg_rank += rank_map[label[i][j][k]]
-                    if label[i][j][k] in label_map.keys():
-                        acc += 1
-                        label_map[label[i][j][k]] += 1
-                        if j == sum(mask[i]) - 1:
-                            last_acc += 1
-                            # print(rec_outputs[i][j][k], inputs[i][j])
-                            
-                count += num_rec
-                if j == sum(mask[i]) - 1:
-                    last_count += num_rec
-                    # print("check model output")
-                    # print(label_map)
-                    # print(label[i][j][:num_rec],rec_outputs[i][j][:num_rec])
-            # break
 
-        return -logits, acc/count, count, last_acc/last_count, last_count, last_avg_rank/last_count
+        for i in range(batch_size):
+            num_rec = sum(last_label_type[i])
+            if self.topk == -1:
+                label_map = dict(zip(rec_outputs[i][:num_rec], [0 for _ in range(num_rec)]))
+            else:
+                label_map = dict(zip(rec_outputs[i], [0 for _ in range(len(rec_outputs[i]))]))
+
+            for j in range(num_rec):
+                if last_label[i][j] in label_map.keys():
+                    label_map[last_label[i][j]] += 1
+                    last_acc += 1
+            last_count += num_rec
+
+        return -logits, last_acc/last_count, last_count, last_acc/last_count, last_count, last_avg_rank/last_count

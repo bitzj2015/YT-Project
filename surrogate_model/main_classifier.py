@@ -118,6 +118,7 @@ else:
     policy_net.device = device
     policy_net.video_embeddings.device = device
     policy_net.video_embeddings.aggregator.device = device
+    policy_net.topk = args.topk
     logger.info("load model")
     # Testing
     stat = run_classifier_epoch(model=policy_net, dataloader=test_loader, mode="test", optimizer=optimizer, ep=0, stat=stat, logger=logger, use_graph=args.use_graph)
