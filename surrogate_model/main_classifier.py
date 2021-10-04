@@ -116,8 +116,9 @@ else:
     }
     policy_net.load_state_dict(torch.load(args.pretrain, map_location=device).state_dict())
     policy_net.device = device
-    policy_net.video_embeddings.device = device
-    policy_net.video_embeddings.aggregator.device = device
+    if args.use_graph:
+        policy_net.video_embeddings.device = device
+        policy_net.video_embeddings.aggregator.device = device
     policy_net.topk = args.topk
     logger.info("load model")
     # Testing

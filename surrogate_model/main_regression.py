@@ -112,12 +112,13 @@ else:
         "train_last_acc": 0, "train_last_count": 0, "train_loss_pos": 0, "train_loss_neg": 0, 
         "test_last_acc": 0, "test_last_count": 0, "test_loss_pos": 0, "test_loss_neg": 0
     }
-    policy_net = torch.load(args.pretrain, map_location=device)
+    policy_net.load_state_dict(torch.load(args.pretrain, map_location=device).state_dict())
     policy_net.device = device
     policy_net.topk = args.topk
     if args.use_graph:
-        policy_net.video_embeddings.device = device
-        policy_net.video_embeddings.aggregator.device = device
+        policy_net.video_embeddings = video_embeddings.to(device)
+        policy_net.graph_embeddings.device = device
+        policy_net.graph_embeddings.aggregator.device = device
     logger.info("load model")
     # Testing
     stat = run_regression_epoch(model=policy_net, dataloader=test_loader, mode="test", optimizer=optimizer, ep=0, stat=stat, logger=logger, use_graph=args.use_graph)
