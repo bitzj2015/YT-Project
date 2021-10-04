@@ -19,7 +19,7 @@ class PolicyNetRegression(torch.nn.Module):
             batch_first=True
         ).to(self.device)
         self.linear = nn.Linear(hidden_dim, emb_dim * num_user_state).to(self.device)
-        self.linear2 = nn.Linear(emb_dim, emb_dim).to(self.device)
+        # self.linear2 = nn.Linear(emb_dim, emb_dim).to(self.device)
         self.num_user_state = num_user_state
         self.graph_embeddings = graph_embeddings
         self.video_embeddings = video_embeddings.to(self.device) # num_videos * emb_dim
@@ -65,7 +65,7 @@ class PolicyNetRegression(torch.nn.Module):
         
 
         # batch_size * hidden_dim -> batch_size * num_user_state * emb_dim
-        outputs = self.linear2(self.relu(self.linear(outputs)).reshape(batch_size, self.num_user_state, -1))
+        outputs = self.tanh(self.linear(outputs)).reshape(batch_size, self.num_user_state, -1)
 
         outputs = torch.matmul(outputs, self.video_embeddings.t()) # / ((torch.norm(outputs, dim=3).unsqueeze(3) * self.vb_norm) + 1e-10)
         outputs, _ = outputs.max(1)

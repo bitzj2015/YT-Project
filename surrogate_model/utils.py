@@ -16,7 +16,7 @@ def load_metadata(
 ):
     # Load video embedding
     with h5py.File(video_emb_path, "r") as hf_emb:
-        video_embeddings = hf_emb["embeddings"][:]
+        video_embeddings = hf_emb["embeddings"][:].astype("float32")
     emb_dim = np.shape(video_embeddings)[1]
     logger.info("video embedding dimension: {}".format(emb_dim))
 
