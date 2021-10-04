@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from constants import *
+import math
 
 class PolicyNetRegression(torch.nn.Module):
     def __init__(self, emb_dim, hidden_dim, graph_embeddings, video_embeddings, device="cpu", topk=-1, use_rand=-1, num_user_state=100):
@@ -63,12 +64,29 @@ class PolicyNetRegression(torch.nn.Module):
         
 
         # batch_size * hidden_dim -> batch_size * num_user_state * emb_dim
-        outputs = self.tanh(self.linear(outputs)).reshape(batch_size, self.num_user_state, -1)
+        outputs = self.linear(outputs).reshape(batch_size, self.num_user_state, -1)
 
         outputs = torch.matmul(outputs, self.video_embeddings.t()) # / ((torch.norm(outputs, dim=3).unsqueeze(3) * self.vb_norm) + 1e-10)
         outputs, _ = outputs.max(1)
+        # outputs = outputs / math.sqrt(self.emb_dim)
         print(outputs.size())
-        
+
+        # atten = torch.matmul(outputs, self.video_embeddings.t()) # / ((torch.norm(outputs, dim=3).unsqueeze(3) * self.vb_norm) + 1e-10)
+        # # # batch_size * num_user_state * num_videos
+        # # print(atten.size())
+        # # atten = F.softmax(atten, -2)
+        # # print(atten.size())
+        # # # batch_size * emb_dim * num_videos
+        # # atten = torch.matmul(outputs.permute(0, 2, 1), atten)
+        # # print(atten.size())
+        # # print(self.video_embeddings.t().unsqueeze(0).size(), outputs.size())
+        # # outputs = atten * (self.video_embeddings.t().unsqueeze(0))
+        # # print(outputs.size())
+        # # outputs = outputs.sum(1).squeeze()
+        # # print(outputs.size())
+        # outputs = atten * F.softmax(atten, -2)
+        # outputs = outputs.sum(1).squeeze()
+
         logits = torch.gather(F.log_softmax(outputs, -1), -1, last_label)
         
         # Get softmax and logits
