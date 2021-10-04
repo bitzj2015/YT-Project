@@ -10,7 +10,7 @@ torch.manual_seed(0)
 
 
 parser = argparse.ArgumentParser(description='run regression.')
-parser.add_argument('--video-emb', dest="video_emb_path", type=str, default="../dataset/video_embeddings_new.hdf5")
+parser.add_argument('--video-emb', dest="video_emb_path", type=str, default="../dataset/video_embeddings_new_aug.hdf5")
 parser.add_argument('--video-graph', dest="video_graph_path", type=str, default="../dataset/video_adj_list_new.json")
 parser.add_argument('--video-id', dest="video_id_path", type=str, default="../dataset/video_ids_new.json")
 parser.add_argument('--train-data', dest="train_data_path", type=str, default="../dataset/train_data_new.hdf5")
