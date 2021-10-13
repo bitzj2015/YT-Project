@@ -52,8 +52,6 @@ class Agent(object):
         self.entropies = []
         self.terminate = False
         self.optimizer = optimizer
-        self.mask = [[1 for _ in range(self.env_args.action_dim)] for _ in range(self.env_args.num_browsers)]
-        self.count = {}
 
     def take_action(self, state, terminate=False, is_training=True):
         if is_training:

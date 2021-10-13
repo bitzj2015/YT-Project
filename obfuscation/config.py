@@ -10,10 +10,12 @@ class EnvConfig(object):
         kernel_size=[3, 4, 5],
         kernel_dim=150,
         dropout=0.2,
-        lstm_num_layer=0.2,
+        lstm_num_layer=2,
         rollout_len=40,
         GAMMA=0.99,
         T=1,
+        rl_lr=0.001,
+        action_dim=100,
         device="cpu",
         agent_path="./param/agent.pkl"
     ):
@@ -29,5 +31,7 @@ class EnvConfig(object):
         self.rollout_len = rollout_len
         self.GAMMA=GAMMA
         self.T = T
+        self.rl_lr = rl_lr
+        self.action_dim = action_dim
         self.device = device
         self.agent_path = agent_path
