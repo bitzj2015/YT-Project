@@ -10,11 +10,11 @@ torch.manual_seed(0)
 
 
 parser = argparse.ArgumentParser(description='run regression.')
-parser.add_argument('--video-emb', dest="video_emb_path", type=str, default="../dataset/video_embeddings_new_aug.hdf5")
-parser.add_argument('--video-graph', dest="video_graph_path", type=str, default="../dataset/video_adj_list_new.json")
-parser.add_argument('--video-id', dest="video_id_path", type=str, default="../dataset/video_ids_new.json")
-parser.add_argument('--train-data', dest="train_data_path", type=str, default="../dataset/train_data_new.hdf5")
-parser.add_argument('--test-data', dest="test_data_path", type=str, default="../dataset/test_data_new.hdf5")
+parser.add_argument('--video-emb', dest="video_emb_path", type=str, default="../dataset/video_embeddings_final_aug.hdf5")
+parser.add_argument('--video-graph', dest="video_graph_path", type=str, default="../dataset/video_adj_list_final_w.json")
+parser.add_argument('--video-id', dest="video_id_path", type=str, default="../dataset/video_ids_final.json")
+parser.add_argument('--train-data', dest="train_data_path", type=str, default="../dataset/train_data_final.hdf5")
+parser.add_argument('--test-data', dest="test_data_path", type=str, default="../dataset/test_data_final.hdf5")
 parser.add_argument('--ep', dest="epoch", type=int, default=30)
 parser.add_argument('--bs', dest="batch_size", type=int, default=256)
 parser.add_argument('--lr', dest="lr", type=float, default=0.001)
@@ -23,6 +23,8 @@ parser.add_argument('--add-edge', dest="add_edge", default=False, action='store_
 parser.add_argument('--eval', dest="eval", default=False, action='store_true')
 parser.add_argument('--version', dest="version", type=str, default="test")
 parser.add_argument('--pretrain', dest="pretrain", type=str, default="./param/policy_with_graph_lstm.pt")
+parser.add_argument("--use-rand", dest="use_rand", type=int, default=-1, help="-1: ML, 0: random, 1: biased")
+parser.add_argument("--num-user-state", dest="num_user_state", type=int, default=100, help="number of user state")
 parser.add_argument("--topk", dest="topk", type=int, default=-1, help="topk=-1: calculate accuracy; topk>1, calculate hit rate@topk")
 args = parser.parse_args()
 
@@ -82,7 +84,9 @@ policy_net = PolicyNetRegression(
     graph_embeddings=video_graph_embeddings,
     video_embeddings=video_embeddings,
     device=device,
-    topk=args.topk
+    topk=args.topk,
+    use_rand=args.use_rand,
+    num_user_state=args.num_user_state
 )
 
 
@@ -92,8 +96,8 @@ if args.eval == False:
     for ep in range(args.epoch):
         # State tracker
         stat = {
-            "train_last_acc": 0, "train_last_count": 0, "train_loss_pos": 0, "train_loss_neg": 0, 
-            "test_last_acc": 0, "test_last_count": 0, "test_loss_pos": 0, "test_loss_neg": 0
+            "train_last_acc": 0, "train_last_acc_ch": 0, "train_last_count": 0, "train_loss_pos": 0, "train_loss_neg": 0, 
+            "test_last_acc": 0, "test_last_acc_ch": 0, "test_last_count": 0, "test_loss_pos": 0, "test_loss_neg": 0
         }
 
         # Training
@@ -109,8 +113,8 @@ if args.eval == False:
 else:
     # State tracker
     stat = {
-        "train_last_acc": 0, "train_last_count": 0, "train_loss_pos": 0, "train_loss_neg": 0, 
-        "test_last_acc": 0, "test_last_count": 0, "test_loss_pos": 0, "test_loss_neg": 0
+        "train_last_acc": 0, "train_last_acc_ch": 0, "train_last_count": 0, "train_loss_pos": 0, "train_loss_neg": 0, 
+        "test_last_acc": 0, "test_last_acc_ch": 0, "test_last_count": 0, "test_loss_pos": 0, "test_loss_neg": 0
     }
     policy_net.load_state_dict(torch.load(args.pretrain, map_location=device).state_dict())
     policy_net.device = device
