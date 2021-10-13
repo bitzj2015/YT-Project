@@ -38,18 +38,18 @@ class PolicyNetRegression(torch.nn.Module):
         inputs = self.graph_embeddings(inputs.reshape(-1).tolist(), with_graph).reshape(batch_size, seq_len, self.emb_dim)
         mask = mask.unsqueeze(2)
 
-        label = label.to(self.device)
-        label_type = label_type.to(self.device)
+        last_label = label.to(self.device)
+        last_label_type = label_type.to(self.device)
         mask = mask.to(self.device)
         
-        last_label = []
-        last_label_type = []
-        for i in range(len(mask)):
-            last_label.append(label[i][sum(mask[i]) - 1])
-            last_label_type.append(label_type[i][sum(mask[i]) - 1])
+        # last_label = []
+        # last_label_type = []
+        # for i in range(len(mask)):
+        #     last_label.append(label[i][sum(mask[i]) - 1])
+        #     last_label_type.append(label_type[i][sum(mask[i]) - 1])
         
-        last_label = torch.stack(last_label, dim=0).squeeze().long()
-        last_label_type = torch.stack(last_label_type, dim=0).squeeze().long()
+        # last_label = torch.stack(last_label, dim=0).squeeze().long()
+        # last_label_type = torch.stack(last_label_type, dim=0).squeeze().long()
         print(last_label.shape)
         batch_size, label_len = last_label.shape
 
@@ -73,18 +73,6 @@ class PolicyNetRegression(torch.nn.Module):
         print(outputs.size())
 
         # atten = torch.matmul(outputs, self.video_embeddings.t()) # / ((torch.norm(outputs, dim=3).unsqueeze(3) * self.vb_norm) + 1e-10)
-        # # # batch_size * num_user_state * num_videos
-        # # print(atten.size())
-        # # atten = F.softmax(atten, -2)
-        # # print(atten.size())
-        # # # batch_size * emb_dim * num_videos
-        # # atten = torch.matmul(outputs.permute(0, 2, 1), atten)
-        # # print(atten.size())
-        # # print(self.video_embeddings.t().unsqueeze(0).size(), outputs.size())
-        # # outputs = atten * (self.video_embeddings.t().unsqueeze(0))
-        # # print(outputs.size())
-        # # outputs = outputs.sum(1).squeeze()
-        # # print(outputs.size())
         # outputs = atten * F.softmax(atten, -2)
         # outputs = outputs.sum(1).squeeze()
 
@@ -106,7 +94,7 @@ class PolicyNetRegression(torch.nn.Module):
         if self.use_rand == 0:
             rec_outputs = np.random.choice(home_video_id_sorted, rec_outputs.size())
         elif self.use_rand == 1:
-            rec_outputs = np.random.choice(home_video_id_sorted[:self.topk], rec_outputs.size())
+            rec_outputs = np.random.choice(home_video_id_sorted, size=rec_outputs.size(), p=home_video_value_sorted)
         else:
             rec_outputs = rec_outputs.tolist()
             
@@ -115,19 +103,24 @@ class PolicyNetRegression(torch.nn.Module):
         
         last_acc = 0
         last_count = 0
-        last_avg_rank = 0
+        last_acc_ch = 0
 
         for i in range(batch_size):
             num_rec = sum(last_label_type[i])
             if self.topk == -1:
                 label_map = dict(zip(rec_outputs[i][:num_rec], [0 for _ in range(num_rec)]))
+                channel_map = dict(zip([video2channel[rec_outputs[i][k]] for k in range(num_rec)], [0 for _ in range(num_rec)]))
             else:
                 label_map = dict(zip(rec_outputs[i], [0 for _ in range(len(rec_outputs[i]))]))
+                channel_map = dict(zip([video2channel[rec_outputs[i][k]] for k in range(len(rec_outputs[i]))], [0 for _ in range(len(rec_outputs[i]))]))
 
             for j in range(num_rec):
                 if last_label[i][j] in label_map.keys():
                     label_map[last_label[i][j]] += 1
                     last_acc += 1
+                if video2channel[last_label[i][j]] in channel_map.keys():
+                    channel_map[video2channel[last_label[i][j]]] += 1
+                    last_acc_ch += 1
             last_count += num_rec
 
-        return -logits * 0.5, -logits * 0.5, last_acc/last_count, last_count
+        return -logits * 0.5, -logits * 0.5, last_acc/last_count, last_count, last_acc_ch/last_count

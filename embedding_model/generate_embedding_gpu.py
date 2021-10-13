@@ -9,11 +9,11 @@ from tqdm import tqdm
 from sentence_transformers import SentenceTransformer
 import ray
 
-emb_model = SentenceTransformer('all-mpnet-base-v2', device='cuda')
+emb_model = SentenceTransformer('all-MiniLM-L6-v2', device='cuda')
 
-VERSION = "_new"
-TYPE = "_v2"
-MAX_LEN = 384
+VERSION = "_final"
+TYPE = ""
+MAX_LEN = 256
 
 with open(f"../dataset/video_metadata{VERSION}.json", "r") as json_file:
     video_metadata = json.load(json_file)

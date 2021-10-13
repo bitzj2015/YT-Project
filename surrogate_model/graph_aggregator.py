@@ -40,6 +40,13 @@ class GraphAggregator(nn.Module):
             # Get the number of neighborhood video nodes
             num_video_neighs = len(video_neighs)
             if num_video_neighs > 0:
+                # print(num_video_neighs)
+                # if num_video_neight > 50:
+                #     c = list(zip(video_neighs_list, video_neighs_weights_list))
+                #     random.shuffle(c)
+                #     video_neighs_list, video_neighs_weights_list = zip(*c)
+                #     video_neighs_list = video_neighs_list[:50]
+                #     video_neighs_weights_list = video_neighs_weights_list[:50]
                 # Get the embeddings of neighborhood video nodes
                 if self.add_edge:
                     video_neighs_weights = np.array([idx for idx in video_neighs_weights_list[i]]).astype("float32")

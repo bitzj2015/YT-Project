@@ -41,11 +41,21 @@ def load_dataset(
 ):
     try:
         with h5py.File(train_data_path, "r") as train_hf:
-            train_dataset = YTDataset(train_hf["input"][:], train_hf["label"][:], train_hf["label_type"][:], train_hf["mask"][:], transform=ToTensor())
+            train_dataset = YTDataset(
+                train_hf["input"][:], train_hf["label"][:], 
+                train_hf["label_type"][:], train_hf["mask"][:], 
+                train_hf["last_label"][:], train_hf["last_label_type"][:], 
+                transform=ToTensor()
+            )
             train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
         with  h5py.File(test_data_path, "r") as test_hf:
-            dataset = YTDataset(test_hf["input"][:], test_hf["label"][:], test_hf["label_type"][:], test_hf["mask"][:], transform=ToTensor())
+            dataset = YTDataset(
+                test_hf["input"][:], test_hf["label"][:], 
+                test_hf["label_type"][:], test_hf["mask"][:], 
+                test_hf["last_label"][:], test_hf["last_label_type"][:], 
+                transform=ToTensor()
+            )
             dataset_size = len(dataset)
             val_dataset_size = int(0.5 * dataset_size)
             test_dataset_size = dataset_size - val_dataset_size
@@ -61,14 +71,16 @@ def run_regression_epoch(model, dataloader, mode="train", optimizer=None, ep=0, 
     for i, batch in tqdm(enumerate(dataloader)):
         # Get data
         input, label, label_type, mask = batch["input"], batch["label"], batch["label_type"], batch["mask"]
-        logger.debug(input.size(), label.size(), label_type.size(), mask.size())
+        last_label = batch["last_label"]
+        last_label_type = batch["last_label_type"]
+        logger.debug(input.size(), label.size(), label_type.size(), mask.size(), last_label.size(), last_label_type.size())
 
         if mode == "train":
             # Forward computation and back propagation
             start_time = time.time()
             model.train()
             optimizer.zero_grad()
-            loss_pos, loss_neg, last_acc, last_count = model(input, label, label_type, mask, with_graph=use_graph)
+            loss_pos, loss_neg, last_acc, last_count, last_acc_ch = model(input, last_label, last_label_type, mask, with_graph=use_graph)
             print("forward:", time.time()-start_time)
             loss_pos = loss_pos.mean(0)
             loss_neg = loss_neg.mean(0)
@@ -80,22 +92,24 @@ def run_regression_epoch(model, dataloader, mode="train", optimizer=None, ep=0, 
         else:
             # Forward computation 
             model.eval()
-            loss_pos, loss_neg, last_acc, last_count = model(input, label, label_type, mask, with_graph=use_graph)
+            loss_pos, loss_neg, last_acc, last_count, last_acc_ch = model(input, last_label, last_label_type, mask, with_graph=use_graph)
             loss_pos = loss_pos.mean(0)
             loss_neg = loss_neg.mean(0)
             
         # Print training results
         stat[f"{mode}_last_acc"] += last_acc * last_count
+        stat[f"{mode}_last_acc_ch"] += last_acc_ch * last_count
         stat[f"{mode}_last_count"] += last_count
         stat[f"{mode}_loss_pos"] += loss_pos.item() * last_count
         stat[f"{mode}_loss_neg"] += loss_neg.item() * last_count
-        logger.info("{}ing, ep: {}, step: {}, loss_pos: {}, loss_neg: {}, home_acc: {}.".format(mode, ep, i, loss_pos.item(), loss_neg.item(), last_acc))
+        logger.info("{}ing, ep: {}, step: {}, loss_pos: {}, loss_neg: {}, home_acc: {}, ch_acc: {}.".format(mode, ep, i, loss_pos.item(), loss_neg.item(), last_acc, last_acc_ch))
     
     # Print final training results
     stat[f"{mode}_last_acc"] /= stat[f"{mode}_last_count"]
+    stat[f"{mode}_last_acc_ch"] /= stat[f"{mode}_last_count"]
     stat[f"{mode}_loss_pos"] /= stat[f"{mode}_last_count"]
     stat[f"{mode}_loss_neg"] /= stat[f"{mode}_last_count"]
-    logger.info("End {}ing, ep: {}, loss_pos: {}, loss_neg: {}, home_acc: {}.".format(mode, ep, stat[f"{mode}_loss_pos"], stat[f"{mode}_loss_neg"], stat[f"{mode}_last_acc"]))
+    logger.info("End {}ing, ep: {}, loss_pos: {}, loss_neg: {}, home_acc: {}, ch_acc: {}.".format(mode, ep, stat[f"{mode}_loss_pos"], stat[f"{mode}_loss_neg"], stat[f"{mode}_last_acc"], stat[f"{mode}_last_acc_ch"]))
     return stat
 
 
@@ -103,7 +117,9 @@ def run_classifier_epoch(model, dataloader, mode="train", optimizer=None, ep=0, 
     for i, batch in tqdm(enumerate(dataloader)):
         # Get data
         input, label, label_type, mask = batch["input"], batch["label"], batch["label_type"], batch["mask"]
-        logger.debug(input.size(), label.size(), label_type.size(), mask.size())
+        last_label = batch["last_label"]
+        last_label_type = batch["last_label_type"]
+        logger.debug(input.size(), label.size(), label_type.size(), mask.size(), last_label.size(), last_label_type.size())
 
         if mode == "train":
             # Forward computation and back propagation
