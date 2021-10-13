@@ -5,10 +5,10 @@ import ray
 import os
 import argparse
 
-TAG = "_new"
+TAG = "_final"
 parser = argparse.ArgumentParser(description='get recvideo.')
 parser.add_argument('--start', type=int, dest="start", help='start point', default=0)
-parser.add_argument('--end', type=int, dest="end", help='end_point', default=20000)
+parser.add_argument('--end', type=int, dest="end", help='end_point', default=60000)
 args = parser.parse_args()
 
 @ray.remote
@@ -33,6 +33,7 @@ def get_recvideos_all(
     for video_id in video_id_list:
         if os.path.isfile(f"./recvideos/{video_id}.json"):
             count += 1
+            video_ids_new[video_id] = 0
         else:
             video_ids_new[video_id] = 0
             count_remain += 1
@@ -40,7 +41,7 @@ def get_recvideos_all(
     with open(f"../dataset/video_ids{TAG}_remain.json", "w") as json_file:
         json.dump(video_ids_new, json_file)
     
-    video_id_list = list(video_ids_new.keys())[args.start:args.end]
+    video_id_list = list(video_ids_new.keys())[args.start:]
     num_cpus = os.cpu_count()
     batch_size = len(video_id_list) // num_cpus + 1
 

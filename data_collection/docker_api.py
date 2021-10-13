@@ -83,9 +83,9 @@ if __name__ == "__main__":
     seed_videos = {}
     for i in range(10000):
         seed_id = videos.sample(1).iloc[0]
-        seed_videos[f"user_{i}"] = seed_id
+        seed_videos[f"user_{i+10000}"] = seed_id
         count += 1
-        if count % 150 == 0:
+        if count % 100 == 0:
             batch.append(seed_videos)
             seed_videos = {}
         

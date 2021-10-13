@@ -1,16 +1,16 @@
 import h5py
 import json
 
-VERSION = "_new"
+VERSION = "_final"
 with h5py.File(f"../dataset/train_data{VERSION}.hdf5", "r") as hf:
-    label = hf["label"][:]
-    label_type = hf["label_type"][:]
+    label = hf["last_label"][:]
+    label_type = hf["last_label_type"][:]
     mask = hf["mask"][:]
 
 label_dist = {}
 for i in range(len(mask)):
-    cur_label_type = label_type[i][sum(mask[i]) - 1]
-    cur_label = label[i][sum(mask[i]) - 1]
+    cur_label_type = label_type[i]
+    cur_label = label[i]
 
     for j in range(len(cur_label_type)):
         if cur_label_type[j] == 1:

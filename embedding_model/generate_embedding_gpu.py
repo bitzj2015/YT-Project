@@ -9,10 +9,10 @@ from tqdm import tqdm
 from sentence_transformers import SentenceTransformer
 import ray
 
-emb_model = SentenceTransformer('all-mpnet-base-v2', device='cuda')
+emb_model = SentenceTransformer('paraphrase-MiniLM-L6-v2', device='cuda')
 
-VERSION = "_new"
-TYPE = "_v2"
+VERSION = "_final"
+TYPE = ""
 MAX_LEN = 384
 
 with open(f"../dataset/video_metadata{VERSION}.json", "r") as json_file:
@@ -51,26 +51,17 @@ for idx in tqdm(sorted(id_videos.keys())):
             cnt += 1
 print("Missing {} videos' metadata, {} with transcripts.".format(cnt, cnt2))
 
-# @ray.remote
 def get_embedding(video_text_list, emb_model):
     embeddings = []
     for i in tqdm(range(len(video_text_list))):
         tokens = video_text_list[i].split(" ")
         text_chunks = [" ".join(tokens[j*MAX_LEN: (j+1)*MAX_LEN]) for j in range(len(tokens) // MAX_LEN + 1)]
-        # print(video_text_list[i][0:100], id_videos[i], len(text_chunks))
         embeddings.append(np.mean(emb_model.encode(text_chunks), axis=0).reshape(1,-1))
     return embeddings
 
 num_cpu = os.cpu_count() 
 batch_size = len(video_texts) // num_cpu + 1
-# ray.init()
-# results = ray.get([get_embedding.remote(video_texts[i*batch_size:(i+1)*batch_size], emb_model) for i in range(num_cpu)])
-# ray.shutdown()
 embeddings = get_embedding(video_texts, emb_model)
-
-# embeddings = []
-# for result in results:
-#     embeddings += result
 
 embeddings = np.concatenate(embeddings, axis=0)
 print(np.shape(embeddings))

@@ -7,10 +7,10 @@ import logging
 import argparse
 
 parser = argparse.ArgumentParser(description='get metadata.')
-parser.add_argument('--log', type=str, dest="log_path", help='log path', default="./logs/log_metadata_new.txt")
-parser.add_argument('--data', type=str, dest="sock_puppet_path", help='sock puppet path', default="../dataset/sock-puppets-new.json")
-parser.add_argument('--video', type=str, dest="video_id_path", help='video id path', default="../dataset/video_stat_new.json")
-parser.add_argument('--metadata', type=str, dest="video_metadata_path", help='video metadata path', default="../dataset/video_metadata_new.json")
+parser.add_argument('--log', type=str, dest="log_path", help='log path', default="./logs/log_metadata_final.txt")
+parser.add_argument('--data', type=str, dest="sock_puppet_path", help='sock puppet path', default="../dataset/sock_puppets_final.json")
+parser.add_argument('--video', type=str, dest="video_id_path", help='video id path', default="../dataset/video_stat_final.json")
+parser.add_argument('--metadata', type=str, dest="video_metadata_path", help='video metadata path', default="../dataset/video_metadata_final.json")
 
 args = parser.parse_args()
 
@@ -43,25 +43,34 @@ def get_metadata(video_id_list: list):
     for video_id in tqdm(video_id_list):
         try:
             url = 'https://youtube.com/watch?v=%s' % video_id
-            js = json.loads(subprocess.run(['/usr/local/bin/youtube-dl', '-J', url], stdout=subprocess.PIPE).stdout)
+            if os.path.exists(f"/scratch/YT_dataset/metadata/{video_id}.json"):
+                js = json.load(open(f"/scratch/YT_dataset/metadata/{video_id}.json", "r"))
+            else:
+                js = json.loads(subprocess.run(['/usr/local/bin/youtube-dl', '-J', url], stdout=subprocess.PIPE).stdout)
+                with open(f"/scratch/YT_dataset/metadata/{video_id}.json", "w") as json_file:
+                    json.dump(js, json_file)
             metadata = dict(
                 title=js.get('title', ''),
                 channel_id=js.get('channel_id', ''),
                 description=js.get('description', ''),
+                view_count=js.get('view_count', ''),
+                average_rating=js.get("average_rating", ''),
                 thumbnails=','.join([t.get('url') for t in js.get('thumbnails', '')]),
                 categories=','.join(js.get('categories', [])),
                 subtitles=get_subtitles(js),
                 automated_captions=get_automatic_captions(js)
             )
             ret.update({video_id: metadata})
+
         except:
             ret.update({video_id: {}})
+
     return ret
 
 def get_all_metadata(
-    sock_puppet_path: str="../dataset/sock-puppets_new.json",
-    video_id_path: str="../dataset/video_stat_new.json",
-    video_metadata_path: str="../dataset/video_metadata_new.json"
+    sock_puppet_path: str="../dataset/sock_puppets_final.json",
+    video_id_path: str="../dataset/video_stat_final.json",
+    video_metadata_path: str="../dataset/video_metadata_final.json"
 ):
 
     # Get video trails
@@ -75,22 +84,21 @@ def get_all_metadata(
     for i in tqdm(range(len(data))):
         try:
             # Viewed videos
-            video_views = data[i]["viewed"][2:-2].split("\", \"")
+            video_views = data[i]["viewed"]
             for video_id in video_views:
                 if video_id not in video_ids.keys():
                     video_ids[video_id] = 0
                 video_ids[video_id] += 1
 
             # History videos
-            video_views = data[i]["homepage"][2:-2].split("\", \"")
-            for video_id in video_views:
-                if video_id not in video_ids.keys():
-                    video_ids[video_id] = 0
-                video_ids[video_id] += 1
+            for video_views in data[i]["homepage"]:
+                for video_id in video_views:
+                    if video_id not in video_ids.keys():
+                        video_ids[video_id] = 0
+                    video_ids[video_id] += 1
 
             # Recommended videos
-            rec_trails = data[i]["recommendation_trail"][2:-2].split("], [")
-            rec_trails = [trail[1:-1].split("\", \"") for trail in rec_trails]
+            rec_trails = data[i]["recommendation_trail"]
             for trail in rec_trails:
                 for video_id in trail:
                     if video_id not in video_ids.keys():
@@ -109,7 +117,8 @@ def get_all_metadata(
 
     # Get video list
     video_id_list = list(video_ids.keys())
-    num_cpus = os.cpu_count()
+    print(len(video_id_list))
+    num_cpus = os.cpu_count() * 2
     batch_size = len(video_id_list) // num_cpus + 1
 
     logger.info("Start getting metadata for videos.")

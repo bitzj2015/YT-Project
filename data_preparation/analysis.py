@@ -8,10 +8,10 @@ parser = argparse.ArgumentParser(description='process yt dataset.')
 parser.add_argument('--phase', type=int, help='preprocess phase')
 args = parser.parse_args()
 
-with open("../dataset/sock-puppets-new.json", "r") as json_file:
+with open("../dataset/sock_puppets_final.json", "r") as json_file:
     data = json.load(json_file)[2]["data"]
 
-VERSION = "_new"
+VERSION = "_final"
 # Parse video trails
 rec_video_id = {}
 view_video_id = {}
@@ -20,22 +20,22 @@ false_cnt = 0
 for i in tqdm(range(len(data))):
     try:
         # Viewed videos
-        video_views = data[i]["viewed"][2:-2].split("\", \"")
+        video_views = data[i]["viewed"]
         for video_id in video_views:
             if video_id not in view_video_id.keys():
                 view_video_id[video_id] = 0
             view_video_id[video_id] += 1
 
         # History videos
-        video_views = data[i]["homepage"][2:-2].split("\", \"")
-        for video_id in video_views:
-            if video_id not in home_video_id.keys():
-                home_video_id[video_id] = 0
-            home_video_id[video_id] += 1
+        video_views = data[i]["homepage"]
+        for video_view in video_views:
+            for video_id in video_view:
+                if video_id not in home_video_id.keys():
+                    home_video_id[video_id] = 0
+                home_video_id[video_id] += 1
 
         # Recommended videos
-        rec_trails = data[i]["recommendation_trail"][2:-2].split("], [")
-        rec_trails = [trail[1:-1].split("\", \"") for trail in rec_trails]
+        rec_trails = data[i]["recommendation_trail"]
         for trail in rec_trails:
             for video_id in trail:
                 if video_id not in rec_video_id.keys():
@@ -75,7 +75,7 @@ plt.ylabel("cdf")
 plt.title("No. homepage videos: {}.".format(len(home_video_id.keys())))
 plt.savefig(f"./fig/home_vidoes{VERSION}.png")
 
-with open("../dataset/video_ids_new.json", "r") as json_file:
+with open(f"../dataset/video_ids{VERSION}.json", "r") as json_file:
     video_ids = json.load(json_file)
 
 home_video_id_sorted = {video_ids[k]: v for k, v in sorted(home_video_id.items(), key=lambda item: item[1], reverse=True)}

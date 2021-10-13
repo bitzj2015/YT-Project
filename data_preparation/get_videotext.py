@@ -7,7 +7,7 @@ from tqdm import tqdm
 import random
 
 
-TAG = "_new"
+TAG = "_final"
 
 logging.basicConfig(
     filename="./logs/log_videotext.txt",
@@ -19,15 +19,11 @@ logging.basicConfig(
 logger=logging.getLogger() 
 logger.setLevel(logging.INFO) 
 
-proxy_list = [
-    "http://69.30.215.222:3128"
-]
+
 @ray.remote
 def get_video_transcript(video_text_url: list):
     for video_id in tqdm(video_text_url):
-
-        subprocess.run(["youtube-dl", "--write-auto-sub", "--skip-download", f"https://www.youtube.com/watch?v={video_id}", "--output", f"../dataset/trans_en/{video_id}",
-                        "--proxy", proxy_list[random.randint(0,len(proxy_list)-1)]], stdout=subprocess.PIPE).stdout
+        subprocess.run(["youtube-dl", "--write-auto-sub", "--skip-download", f"https://www.youtube.com/watch?v={video_id}", "--output", f"../dataset/trans_en/{video_id}"], stdout=subprocess.PIPE).stdout
 
 def get_all_video_transcript(
     video_metadata_path: str=f"../dataset/video_metadata{TAG}.json"
@@ -48,11 +44,11 @@ def get_all_video_transcript(
     batch_size = len(video_id_list) // num_cpus + 1
 
     logger.info("Start getting text.")
-    ray.init()
-    ray.get(
-        [get_video_transcript.remote(video_id_list[i*batch_size: (i+1)*batch_size]) for i in range(num_cpus)]
-    )
-    ray.shutdown()
+    # ray.init()
+    # ray.get(
+    #     [get_video_transcript.remote(video_id_list[i*batch_size: (i+1)*batch_size]) for i in range(num_cpus)]
+    # )
+    # ray.shutdown()
 
 if __name__=="__main__":
     get_all_video_transcript(f"../dataset/video_metadata{TAG}.json")

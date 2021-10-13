@@ -2,11 +2,8 @@ import json
 import numpy as np
 import h5py
 from tqdm import tqdm
-from sentence_transformers import SentenceTransformer
 
-emb_model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
-
-VERSION = "_new"
+VERSION = "_final"
 
 with open(f"../dataset/video_metadata{VERSION}.json", "r") as json_file:
     video_metadata = json.load(json_file)
@@ -76,19 +73,19 @@ view_counts = (view_counts - np.mean(view_counts)) / (np.std(view_counts) + 1e-1
 print(np.mean(average_ratings), np.std(average_ratings), np.max(average_ratings), np.min(average_ratings))
 print(np.mean(view_counts), np.std(view_counts), np.max(view_counts), np.min(view_counts))
 
-with h5py.File(f"../dataset/video_embeddings{VERSION}.hdf5", "r") as hf:
-    embeddings = hf["embeddings"][:]
-    videoIds = hf["video_ids"][:]
-print(embeddings.shape)
-print(isinstance(embeddings[0][0], np.float32))
-augmented_embeddings = np.concatenate([embeddings, one_hot_categories, average_ratings.reshape(-1,1), view_counts.reshape(-1, 1)], axis=1)
-print(augmented_embeddings.shape)
+# with h5py.File(f"../dataset/video_embeddings{VERSION}.hdf5", "r") as hf:
+#     embeddings = hf["embeddings"][:]
+#     videoIds = hf["video_ids"][:]
+# print(embeddings.shape)
+# print(isinstance(embeddings[0][0], np.float32))
+# augmented_embeddings = np.concatenate([embeddings, one_hot_categories, average_ratings.reshape(-1,1), view_counts.reshape(-1, 1)], axis=1)
+# print(augmented_embeddings.shape)
 
-hf = h5py.File(f"../dataset/video_embeddings{VERSION}_aug.hdf5", "w")
-hf.create_dataset('embeddings', data=augmented_embeddings.astype("float32"))
-hf.create_dataset('video_ids', data=videoIds)
-hf.close()
-print(isinstance(augmented_embeddings[0][0], np.float32))
+# hf = h5py.File(f"../dataset/video_embeddings{VERSION}_aug.hdf5", "w")
+# hf.create_dataset('embeddings', data=augmented_embeddings.astype("float32"))
+# hf.create_dataset('video_ids', data=videoIds)
+# hf.close()
+# print(isinstance(augmented_embeddings[0][0], np.float32))
 
 with open(f"../dataset/video_video_edge{VERSION}_w.json", "r") as json_file:
     video_video_edge = json.load(json_file)
@@ -110,4 +107,17 @@ with open(f"../dataset/video2channel{VERSION}.json", "w") as json_file:
 
 with open(f"../dataset/channel2video{VERSION}.json", "w") as json_file:
     json.dump(channel2video, json_file)
+
+channel_ids = dict(zip(list(channel2video.keys()), [i for i in range(len(channel2video))]))
+video2channel_ids = {}
+for video_id in video2channel.keys():
+    video2channel_ids[video_id] = channel_ids[video2channel[video_id]]
+
+with open(f"../dataset/channel_ids{VERSION}.json", "w") as json_file:
+    json.dump(channel_ids, json_file)
+
+with open(f"../dataset/video2channel_ids{VERSION}.json", "w") as json_file:
+    json.dump(video2channel_ids, json_file)
+
+
 

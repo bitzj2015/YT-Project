@@ -31,6 +31,8 @@ def parse_recvideo(recvideo_file_list: list, video_ids: dict):
             cnt = 0
             with open(f"./recvideos/{recvideo_file}", "r") as text_file:
                 video_id = recvideo_file.split(".")[0]
+                if video_id not in video_ids.keys():
+                    continue
                 video_video_edge[video_id] = {}
                 for line in text_file.readlines():
                     cnt_all += 1
@@ -41,7 +43,7 @@ def parse_recvideo(recvideo_file_list: list, video_ids: dict):
                         continue
                     else:
                         cnt += 1
-                        video_video_edge[video_id][recvideo_id] = 1 / cnt
+                        video_video_edge[video_id][recvideo_id] = 1 / (cnt // 10 + 1)
                         
             stat["avg_num_edges"].append(len(video_video_edge[video_id].keys()))
             stat["avg_hit_rate"].append(cnt/cnt_all)
@@ -51,7 +53,7 @@ def parse_recvideo(recvideo_file_list: list, video_ids: dict):
     return video_video_edge
 
 
-VERSION = "_new"
+VERSION = "_final"
 
 with open(f"../dataset/video_ids{VERSION}.json", "r") as json_file:
     video_ids = json.load(json_file)
