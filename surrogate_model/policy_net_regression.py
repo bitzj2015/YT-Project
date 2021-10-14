@@ -31,7 +31,23 @@ class PolicyNetRegression(torch.nn.Module):
         self.relu = nn.ReLU().to(self.device)
         self.train()
 
-    def forward(self, inputs, label, label_type, mask, topk=-1, with_graph=False):
+    def get_rec(self, inputs, with_graph=False):
+        batch_size, seq_len = inputs.shape
+        inputs = self.graph_embeddings(inputs.reshape(-1).tolist(), with_graph).reshape(batch_size, seq_len, self.emb_dim)
+        out, _ = self.lstm(inputs)
+        outputs = []
+        for i in range(batch_size):
+            outputs.append(out[i][-1])
+        outputs = torch.stack(outputs, dim=0).squeeze()
+        outputs = self.tanh(self.linear(outputs)).reshape(batch_size, self.num_user_state, -1)
+        outputs = torch.matmul(outputs, self.video_embeddings.t()) 
+        outputs, _ = outputs.max(1)
+        _, rec_outputs = torch.topk(F.softmax(outputs, -1), k=100, dim=-1)
+         
+        return rec_outputs.tolist()
+
+
+    def forward(self, inputs, label, label_type, mask, with_graph=False):
 
         batch_size, seq_len = inputs.shape
         inputs = inputs * mask
@@ -50,12 +66,12 @@ class PolicyNetRegression(torch.nn.Module):
         
         # last_label = torch.stack(last_label, dim=0).squeeze().long()
         # last_label_type = torch.stack(last_label_type, dim=0).squeeze().long()
-        print(last_label.shape)
-        batch_size, label_len = last_label.shape
+
+        batch_size, _ = last_label.shape
 
         # batch_size * seq_len * emb_dim -> batch_size * seq_len * hidden_dim
-        out, (last_hidden, _) = self.lstm(inputs)
-        print(last_hidden.size())
+        out, _ = self.lstm(inputs)
+        # print(last_hidden.size())
         # outputs = last_hidden[-1]
         
         outputs = []

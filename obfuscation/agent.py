@@ -13,7 +13,7 @@ class A2Clstm(torch.nn.Module):
         self.fc = nn.Linear(len(self.env_args.kernel_size) * self.env_args.kernel_dim, self.env_args.hidden_dim)
         self.lstm = nn.LSTMCell(self.env_args.hidden_dim, self.env_args.hidden_dim)
         self.lstm = nn.LSTM(
-            input_size=self.env_args.emb_dim,
+            input_size=self.env_args.hidden_dim,
             hidden_size=self.env_args.hidden_dim,
             num_layers=self.env_args.lstm_num_layer,
             bidirectional=False,
@@ -26,13 +26,14 @@ class A2Clstm(torch.nn.Module):
     def forward(self, inputs):
         inputs, (hx, cx) = inputs
         batch_size, seq_len = inputs.shape
-        inputs = self.video_embeddings[inputs.reshape(-1).tolist()].reshape(batch_size, seq_len, self.emb_dim)
+        inputs = self.video_embeddings[inputs.reshape(-1).tolist()].reshape(batch_size, 1, seq_len, self.env_args.emb_dim)
         inputs = [F.relu(conv(inputs)).squeeze(3) for conv in self.convs]
         inputs = [F.max_pool1d(i, i.size(2)).squeeze(2) for i in inputs]
         concated = torch.cat(inputs, 1)
 
         x = self.fc(concated)
         x = x.view(x.size(0), 1, -1)
+        print(x.size())
         x, (hx, cx) = self.lstm(x, (hx, cx)) # Single step forward
         x = x.view(x.size(0), -1)
 
@@ -44,8 +45,8 @@ class Agent(object):
         self.model = model
         self.env_args = env_args
         self.state = torch
-        self.hx = torch.zeros(self.env_args.num_browsers, self.env_args.lstm_num_layer, self.env_args.hidden_dim,).to(self.env_args.device)
-        self.cx = torch.zeros(self.env_args.num_browsers, self.env_args.lstm_num_layer, self.env_args.hidden_dim,).to(self.env_args.device)
+        self.hx = torch.zeros(self.env_args.lstm_num_layer, self.env_args.num_browsers, self.env_args.hidden_dim,).to(self.env_args.device)
+        self.cx = torch.zeros(self.env_args.lstm_num_layer, self.env_args.num_browsers, self.env_args.hidden_dim,).to(self.env_args.device)
         self.values = []
         self.log_probs = []
         self.rewards = []
@@ -62,22 +63,22 @@ class Agent(object):
         self.terminate = terminate
         self.state = state
         if self.terminate:
-            value, _, _, _ = self.model((self.state, (self.hx, self.cx)), True)
-            self.values.append(value)
+            value, _, _, _ = self.model((self.state, (self.hx, self.cx)))
+            self.values.append(value.squeeze(1))
             return None
         else:
-            value, logit, self.hx, self.cx = self.model((self.state, (self.hx, self.cx)), True)
-            self.values.append(value)
-            print(value.size(), logit.size())
+            value, logit, self.hx, self.cx = self.model((self.state, (self.hx, self.cx)))
+            self.values.append(value.squeeze(1))
+            # print(value.size(), logit.size())
             prob = F.softmax(logit, 1)
             log_prob = F.log_softmax(logit, 1)
             entropy = -(log_prob * prob).sum(1)
             self.entropies.append(entropy)
             action = prob.multinomial(num_samples=1).data
-            print(action.view(-1))
+            # print(action.view(-1))
             log_prob = log_prob.gather(1, action)
-            self.log_probs.append(log_prob)
-            return action
+            self.log_probs.append(log_prob.squeeze(1))
+            return action.view(-1)
 
     def get_reward(self, reward):
         self.rewards.append(torch.Tensor(reward).to(self.env_args.device))
@@ -89,7 +90,7 @@ class Agent(object):
         rewards = torch.from_numpy(rewards).to(self.env_args.device)
         self.rewards.append(rewards)
 
-    def update_model(self, retrain=True):
+    def update_model(self, retrain=False):
         if retrain:
             self.model.load_state_dict(torch.load(self.env_args.agent_path))
 
@@ -116,6 +117,7 @@ class Agent(object):
         self.optimizer.zero_grad()
 
         loss = policy_loss.sum() + 0.5 * value_loss.sum(0)
+        print("loss: {}".format(loss.item()))
         loss.backward(retain_graph=True)
         torch.nn.utils.clip_grad_norm(self.model.parameters(), 100)
         self.optimizer.step()
@@ -128,5 +130,5 @@ class Agent(object):
         self.rewards = []
         self.entropies = []
         self.terminate = False
-        self.hx = torch.zeros(self.env_args.num_browsers, self.env_args.lstm_num_layer, self.env_args.hidden_dim,).to(self.env_args.device)
-        self.cx = torch.zeros(self.env_args.num_browsers, self.env_args.lstm_num_layer, self.env_args.hidden_dim,).to(self.env_args.device)
+        self.hx = torch.zeros(self.env_args.lstm_num_layer, self.env_args.num_browsers, self.env_args.hidden_dim,).to(self.env_args.device)
+        self.cx = torch.zeros(self.env_args.lstm_num_layer, self.env_args.num_browsers, self.env_args.hidden_dim,).to(self.env_args.device)

@@ -4,14 +4,15 @@ class EnvConfig(object):
         self,
         num_browsers=16,
         alpha=0.2,
-        emb_dim=300,
+        his_len=5,
+        emb_dim=384 + 19,
         hidden_dim=128,
         num_user_state=100,
         kernel_size=[3, 4, 5],
         kernel_dim=150,
         dropout=0.2,
         lstm_num_layer=2,
-        rollout_len=40,
+        rollout_len=30,
         GAMMA=0.99,
         T=1,
         rl_lr=0.001,
@@ -21,6 +22,7 @@ class EnvConfig(object):
     ):
         self.num_browsers = num_browsers
         self.alpha = alpha
+        self.his_len = his_len
         self.emb_dim = emb_dim
         self.hidden_dim = hidden_dim
         self.num_user_state = num_user_state
