@@ -73,19 +73,19 @@ view_counts = (view_counts - np.mean(view_counts)) / (np.std(view_counts) + 1e-1
 print(np.mean(average_ratings), np.std(average_ratings), np.max(average_ratings), np.min(average_ratings))
 print(np.mean(view_counts), np.std(view_counts), np.max(view_counts), np.min(view_counts))
 
-# with h5py.File(f"../dataset/video_embeddings{VERSION}.hdf5", "r") as hf:
-#     embeddings = hf["embeddings"][:]
-#     videoIds = hf["video_ids"][:]
-# print(embeddings.shape)
-# print(isinstance(embeddings[0][0], np.float32))
-# augmented_embeddings = np.concatenate([embeddings, one_hot_categories, average_ratings.reshape(-1,1), view_counts.reshape(-1, 1)], axis=1)
-# print(augmented_embeddings.shape)
+with h5py.File(f"../dataset/video_embeddings{VERSION}.hdf5", "r") as hf:
+    embeddings = hf["embeddings"][:]
+    videoIds = hf["video_ids"][:]
+print(embeddings.shape)
+print(isinstance(embeddings[0][0], np.float32))
+augmented_embeddings = np.concatenate([embeddings, one_hot_categories, average_ratings.reshape(-1,1), view_counts.reshape(-1, 1)], axis=1)
+print(augmented_embeddings.shape)
 
-# hf = h5py.File(f"../dataset/video_embeddings{VERSION}_aug.hdf5", "w")
-# hf.create_dataset('embeddings', data=augmented_embeddings.astype("float32"))
-# hf.create_dataset('video_ids', data=videoIds)
-# hf.close()
-# print(isinstance(augmented_embeddings[0][0], np.float32))
+hf = h5py.File(f"../dataset/video_embeddings{VERSION}_aug.hdf5", "w")
+hf.create_dataset('embeddings', data=augmented_embeddings.astype("float32"))
+hf.create_dataset('video_ids', data=videoIds)
+hf.close()
+print(isinstance(augmented_embeddings[0][0], np.float32))
 
 with open(f"../dataset/video_video_edge{VERSION}_w.json", "r") as json_file:
     video_video_edge = json.load(json_file)

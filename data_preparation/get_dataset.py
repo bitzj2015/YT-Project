@@ -16,7 +16,7 @@ logger=logging.getLogger()
 logger.setLevel(logging.INFO) 
 
 VERSION = "_final"
-
+FILTER = "_filter"
 with open(f"../dataset/sock_puppets{VERSION}.json", "r") as json_file:
     data = json.load(json_file)[2]["data"]
 
@@ -54,6 +54,14 @@ last_label_type_all = []
 max_label_len = 1000
 max_trail_len = 40
 topk_home = 100
+initial_home_video_ids = {}
+for i in tqdm(range(len(data))):
+    try:
+        initial_home_video_ids.update(dict(zip(data[i]["initial_homepage"], [1 for _ in range(len(data[i]["initial_homepage"]))])))
+    except: 
+        continue
+print(len(initial_home_video_ids))
+
 for i in tqdm(range(len(data))):
     try:
         input_data = []
@@ -61,12 +69,10 @@ for i in tqdm(range(len(data))):
 
         # Get video trails
         video_views = data[i]["viewed"]
-        viewed_video_ids = {}
         for video_id in video_views:
             # if video_id in video_ids.keys():
             input_data.append(video_ids[video_id])
             mask_data.append(1)
-            viewed_video_ids[video_id] = 1
 
         # Append -1 if the length of trail is smaller than max_trail_len
         if len(input_data) < max_trail_len:
@@ -106,7 +112,7 @@ for i in tqdm(range(len(data))):
         home_video_ids = {}
         for home_rec in home_recs:
             for video_id in home_rec:
-                if video_id in viewed_video_ids.keys():
+                if video_id in initial_home_video_ids.keys():
                     continue
                 if video_id not in home_video_ids.keys():
                     home_video_ids[video_id] = 0
@@ -162,7 +168,7 @@ logger.info("Input: {}, label: {}, label_type: {}, mask: {}, last_label: {}, las
     np.shape(last_label_type_all))
 )
 
-hf = h5py.File(f"../dataset/train_data{VERSION}.hdf5", "w")
+hf = h5py.File(f"../dataset/train_data{VERSION}{FILTER}.hdf5", "w")
 hf.create_dataset('input', data=input_data_all[idx[:train_size]])
 hf.create_dataset('label', data=label_data_all[idx[:train_size]])
 hf.create_dataset('label_type', data=label_type_data_all[idx[:train_size]])
@@ -171,7 +177,7 @@ hf.create_dataset('last_label_type', data=last_label_type_all[idx[:train_size]])
 hf.create_dataset('mask', data=mask_data_all[idx[:train_size]])
 hf.close()
 
-hf = h5py.File(f"../dataset/test_data{VERSION}.hdf5", "w")
+hf = h5py.File(f"../dataset/test_data{VERSION}{FILTER}.hdf5", "w")
 hf.create_dataset('input', data=input_data_all[idx[train_size:]])
 hf.create_dataset('label', data=label_data_all[idx[train_size:]])
 hf.create_dataset('label_type', data=label_type_data_all[idx[train_size:]])
@@ -179,3 +185,15 @@ hf.create_dataset('last_label', data=last_label_all[idx[train_size:]])
 hf.create_dataset('last_label_type', data=last_label_type_all[idx[train_size:]])
 hf.create_dataset('mask', data=mask_data_all[idx[train_size:]])
 hf.close()
+
+home_video_id = {}
+for i in range(train_size):
+    for j in range(sum(last_label_type_all[i])):
+        video_id = str(last_label_all[i][j])
+        if video_id not in home_video_id.keys():
+            home_video_id[video_id] = 0
+        home_video_id[video_id] += 1
+
+home_video_id_sorted = {k: v for k, v in sorted(home_video_id.items(), key=lambda item: item[1], reverse=True)}
+with open(f"../dataset/home_video_id_sorted{VERSION}{FILTER}.json", "w") as json_file:
+    json.dump(home_video_id_sorted, json_file)

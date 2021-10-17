@@ -33,16 +33,20 @@ class RolloutWorker(object):
     def update_reward(self, cur_rec_base, cur_rec):
         self.cur_rec_base = dict(zip(cur_rec_base, [0 for _ in range(len(cur_rec_base))]))
         self.cur_rec = dict(zip(cur_rec, [0 for _ in range(len(cur_rec))]))
-        self.global_rec_base.update(self.cur_rec_base)
-        self.global_rec.update(self.cur_rec)
+        # self.global_rec_base.update(self.cur_rec_base)
+        # self.global_rec.update(self.cur_rec)
+        self.global_rec_base = self.cur_rec_base
+        self.global_rec = self.cur_rec
         self.pre_rewards = self.cur_rewards
-        self.cur_reward = {"removed": 0, "added": 0}
+        self.cur_rewards = {"removed": 0, "added": 0}
         for video in self.global_rec_base.keys():
             if video not in self.global_rec.keys():
-                self.cur_reward["removed"] += 1
+                self.cur_rewards["removed"] += 1
         for video in self.global_rec.keys():
             if video not in self.global_rec_base.keys():
-                self.cur_reward["added"] += 1
+                self.cur_rewards["added"] += 1
+        if self.user_id == 0:
+            print("cur_reward: ", self.cur_rewards, list(self.global_rec.keys())[0:10], list(self.global_rec_base.keys())[0:10])
     
     def rollout(self, obfuscation_video=-1):
         if obfuscation_video == -1:
@@ -57,16 +61,16 @@ class RolloutWorker(object):
         self.step += 1
 
     def get_state(self, his_len=10):
-        return np.array(self.watch_history[-his_len:])
+        return np.array(self.watch_history[:])
     
     def get_base_state(self, his_len=10):
-        return np.array(self.watch_history_base[-his_len:])
+        return np.array(self.watch_history_base[:])
 
     def get_reward(self):
-        return (self.cur_reward["removed"] + self.cur_reward["added"]) / 100
+        return (self.cur_rewards["removed"] + self.cur_rewards["added"]) / 100
     
     def get_reward_gain(self):
-        return (self.cur_reward["removed"] + self.cur_reward["added"] - self.pre_rewards["removed"] - self.pre_rewards["added"]) / 100
+        return (self.cur_rewards["removed"] + self.cur_rewards["added"] - self.pre_rewards["removed"] - self.pre_rewards["added"]) / 100
 
     def clear_worker(self):
         self.pre_rewards = {"removed": 0, "added": 0}
@@ -109,7 +113,7 @@ class Env(object):
     
     def get_reward_gain_from_workers(self):
         self.all_reward_gains = ray.get([worker.get_reward_gain.remote() for worker in self.workers])
-        print(self.all_reward_gains)
+        # print(self.all_reward_gains)
         return np.array(self.all_reward_gains).reshape(-1)
 
     def send_reward_to_workers(self):
@@ -142,17 +146,17 @@ class Env(object):
             else:
                 ray.get([self.workers[i].rollout.remote(-1) for i in range(len(self.workers))])
         self.get_next_obfuscation_videos(terminate=True)
-        self.update_rl_agent(reward_only=False)
+        loss = self.update_rl_agent(reward_only=False)
         mean_rewards = np.mean(self.get_reward_from_workers())
-        print("reward: {}".format(mean_rewards))
+        return loss, mean_rewards
 
     def update_rl_agent(self, reward_only=True):
         if reward_only:
-            self.rl_agent.update_rewards(self.get_reward_gain_from_workers())
-            print("hello")
+            self.rl_agent.update_rewards(self.get_reward_from_workers())
         else:
-            self.rl_agent.update_model()
+            loss, _ = self.rl_agent.update_model()
             self.rl_agent.clear_actions()
+            return loss
 
     def clear_env(self):
         self.all_rewards = []

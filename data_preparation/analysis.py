@@ -17,6 +17,10 @@ rec_video_id = {}
 view_video_id = {}
 home_video_id = {}
 false_cnt = 0
+initial_home_video_ids = {}
+for i in tqdm(range(len(data))):
+    initial_home_video_ids.update(dict(zip(data[i]["initial_homepage"], [1 for _ in range(len(data[i]["initial_homepage"]))])))
+print(len(initial_home_video_ids))
 for i in tqdm(range(len(data))):
     try:
         # Viewed videos
@@ -25,14 +29,20 @@ for i in tqdm(range(len(data))):
             if video_id not in view_video_id.keys():
                 view_video_id[video_id] = 0
             view_video_id[video_id] += 1
-
+        
         # History videos
         video_views = data[i]["homepage"]
+        tmp = {}
         for video_view in video_views:
             for video_id in video_view:
+                if video_id in initial_home_video_ids.keys():
+                    continue
                 if video_id not in home_video_id.keys():
                     home_video_id[video_id] = 0
-                home_video_id[video_id] += 1
+                if video_id not in tmp.keys():
+                    home_video_id[video_id] += 1
+                else:
+                    tmp[video_id] = 1
 
         # Recommended videos
         rec_trails = data[i]["recommendation_trail"]
@@ -79,5 +89,5 @@ with open(f"../dataset/video_ids{VERSION}.json", "r") as json_file:
     video_ids = json.load(json_file)
 
 home_video_id_sorted = {video_ids[k]: v for k, v in sorted(home_video_id.items(), key=lambda item: item[1], reverse=True)}
-with open("../dataset/home_video_id_sorted.json", "w") as json_file:
+with open("../dataset/home_video_id_sorted{VERSION}.json", "w") as json_file:
     json.dump(home_video_id_sorted, json_file)

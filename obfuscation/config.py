@@ -2,9 +2,9 @@
 class EnvConfig(object):
     def __init__(
         self,
-        num_browsers=16,
-        alpha=0.2,
-        his_len=5,
+        num_browsers=64,
+        alpha=0.5,
+        his_len=10,
         emb_dim=384 + 19,
         hidden_dim=128,
         num_user_state=100,

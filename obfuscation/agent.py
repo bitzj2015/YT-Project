@@ -11,7 +11,6 @@ class A2Clstm(torch.nn.Module):
         self.convs = nn.ModuleList([nn.Conv2d(1, self.env_args.kernel_dim, (self.env_args.K, self.env_args.emb_dim))
                                     for self.env_args.K in self.env_args.kernel_size])
         self.fc = nn.Linear(len(self.env_args.kernel_size) * self.env_args.kernel_dim, self.env_args.hidden_dim)
-        self.lstm = nn.LSTMCell(self.env_args.hidden_dim, self.env_args.hidden_dim)
         self.lstm = nn.LSTM(
             input_size=self.env_args.hidden_dim,
             hidden_size=self.env_args.hidden_dim,
@@ -21,7 +20,7 @@ class A2Clstm(torch.nn.Module):
             batch_first=True
         )
         self.critic_linear = nn.Linear(self.env_args.hidden_dim, 1)
-        self.actor_linear = nn.Linear(self.env_args.hidden_dim, self.env_args.emb_dim * self.env_args.num_user_state)
+        self.actor_linear = nn.Linear(self.env_args.hidden_dim, self.env_args.action_dim)
 
     def forward(self, inputs):
         inputs, (hx, cx) = inputs
@@ -33,7 +32,7 @@ class A2Clstm(torch.nn.Module):
 
         x = self.fc(concated)
         x = x.view(x.size(0), 1, -1)
-        print(x.size())
+        # print(x.size())
         x, (hx, cx) = self.lstm(x, (hx, cx)) # Single step forward
         x = x.view(x.size(0), -1)
 
@@ -80,8 +79,8 @@ class Agent(object):
             self.log_probs.append(log_prob.squeeze(1))
             return action.view(-1)
 
-    def get_reward(self, reward):
-        self.rewards.append(torch.Tensor(reward).to(self.env_args.device))
+    # def get_reward(self, reward):
+    #     self.rewards.append(torch.Tensor(reward).to(self.env_args.device))
 
     def save_param(self):
         torch.save(self.model.state_dict(),self.env_args.agent_path)
@@ -117,7 +116,7 @@ class Agent(object):
         self.optimizer.zero_grad()
 
         loss = policy_loss.sum() + 0.5 * value_loss.sum(0)
-        print("loss: {}".format(loss.item()))
+        # print("loss: {}".format(loss.item()))
         loss.backward(retain_graph=True)
         torch.nn.utils.clip_grad_norm(self.model.parameters(), 100)
         self.optimizer.step()
