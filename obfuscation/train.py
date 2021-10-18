@@ -11,8 +11,8 @@ import json
 
 parser = argparse.ArgumentParser(description='run regression.')
 parser.add_argument('--video-emb', dest="video_emb_path", type=str, default="../dataset/video_embeddings_final_aug.hdf5")
-parser.add_argument('--video-id', dest="video_id_path", type=str, default="../dataset/video_ids_final.json")
-parser.add_argument('--train-data', dest="train_data_path", type=str, default="../dataset/train_data_final.hdf5")
+parser.add_argument('--video-id', dest="video_id_path", type=str, default="../dataset/video_ids_final_filter.json")
+parser.add_argument('--train-data', dest="train_data_path", type=str, default="../dataset/train_data_final_filter.hdf5")
 parser.add_argument('--test-data', dest="test_data_path", type=str, default="../dataset/test_data_final.hdf5")
 args = parser.parse_args()
 
@@ -25,7 +25,7 @@ with h5py.File(args.video_emb_path, "r") as hf_emb:
     video_embeddings = hf_emb["embeddings"][:].astype("float32")
 
 yt_model = torch.load(
-    "/scratch/param/policy_no_graph_edge_reg_new73_100_out_64_001_atten_final_aug.pt", 
+    "/scratch/param/policy_no_graph_edge_reg_new73_100_out_64_001_atten_final_filter_aug.pt", 
     map_location=device
 )
 
