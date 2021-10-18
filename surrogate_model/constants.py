@@ -1,6 +1,6 @@
 import json
 
-with open("../dataset/home_video_id_sorted_final.json", "r") as json_file:
+with open("../dataset/home_video_id_sorted_final_filter.json", "r") as json_file:
     data = json.load(json_file)
 home_video_id_sorted = [int(key) for key in data.keys()]
 all_values = list(data.values())

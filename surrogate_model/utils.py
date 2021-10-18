@@ -44,7 +44,7 @@ def load_dataset(
             train_dataset = YTDataset(
                 train_hf["input"][:], train_hf["label"][:], 
                 train_hf["label_type"][:], train_hf["mask"][:], 
-                train_hf["last_label"][:], train_hf["last_label_type"][:], 
+                train_hf["last_label"][:], train_hf["last_label_p"][:], train_hf["last_label_type"][:], 
                 transform=ToTensor()
             )
             train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -53,7 +53,7 @@ def load_dataset(
             dataset = YTDataset(
                 test_hf["input"][:], test_hf["label"][:], 
                 test_hf["label_type"][:], test_hf["mask"][:], 
-                test_hf["last_label"][:], test_hf["last_label_type"][:], 
+                test_hf["last_label"][:], test_hf["last_label_p"][:], test_hf["last_label_type"][:], 
                 transform=ToTensor()
             )
             dataset_size = len(dataset)
@@ -73,6 +73,7 @@ def run_regression_epoch(model, dataloader, mode="train", optimizer=None, ep=0, 
         input, label, label_type, mask = batch["input"], batch["label"], batch["label_type"], batch["mask"]
         last_label = batch["last_label"]
         last_label_type = batch["last_label_type"]
+        last_label_p = batch["last_label_p"]
         logger.debug(input.size(), label.size(), label_type.size(), mask.size(), last_label.size(), last_label_type.size())
 
         if mode == "train":
@@ -80,7 +81,7 @@ def run_regression_epoch(model, dataloader, mode="train", optimizer=None, ep=0, 
             start_time = time.time()
             model.train()
             optimizer.zero_grad()
-            loss_pos, loss_neg, last_acc, last_count, last_acc_ch = model(input, last_label, last_label_type, mask, with_graph=use_graph)
+            loss_pos, loss_neg, last_acc, last_count, last_acc_ch = model(input, last_label, last_label_p, last_label_type, mask, with_graph=use_graph)
             print("forward:", time.time()-start_time)
             loss_pos = loss_pos.mean(0)
             loss_neg = loss_neg.mean(0)
@@ -92,7 +93,7 @@ def run_regression_epoch(model, dataloader, mode="train", optimizer=None, ep=0, 
         else:
             # Forward computation 
             model.eval()
-            loss_pos, loss_neg, last_acc, last_count, last_acc_ch = model(input, last_label, last_label_type, mask, with_graph=use_graph)
+            loss_pos, loss_neg, last_acc, last_count, last_acc_ch = model(input, last_label, last_label_p, last_label_type, mask, with_graph=use_graph)
             loss_pos = loss_pos.mean(0)
             loss_neg = loss_neg.mean(0)
             

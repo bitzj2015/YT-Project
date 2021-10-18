@@ -47,7 +47,7 @@ class PolicyNetRegression(torch.nn.Module):
         return rec_outputs.tolist()
 
 
-    def forward(self, inputs, label, label_type, mask, with_graph=False):
+    def forward(self, inputs, label, label_p, label_type, mask, with_graph=False):
 
         batch_size, seq_len = inputs.shape
         inputs = inputs * mask
@@ -55,6 +55,7 @@ class PolicyNetRegression(torch.nn.Module):
         mask = mask.unsqueeze(2)
 
         last_label = label.to(self.device)
+        last_label_p = label_p.to(self.device)
         last_label_type = label_type.to(self.device)
         mask = mask.to(self.device)
         
@@ -115,6 +116,7 @@ class PolicyNetRegression(torch.nn.Module):
             rec_outputs = rec_outputs.tolist()
             
         last_label = last_label.tolist()
+        last_label_p = last_label_p.tolist()
         last_label_type = last_label_type.tolist()
         
         last_acc = 0
@@ -133,10 +135,10 @@ class PolicyNetRegression(torch.nn.Module):
             for j in range(num_rec):
                 if last_label[i][j] in label_map.keys():
                     label_map[last_label[i][j]] += 1
-                    last_acc += 1
+                    last_acc += 1 * last_label_p[i][j]
                 if video2channel[last_label[i][j]] in channel_map.keys():
                     channel_map[video2channel[last_label[i][j]]] += 1
                     last_acc_ch += 1
             last_count += num_rec
-
-        return -logits * 0.5, -logits * 0.5, last_acc/last_count, last_count, last_acc_ch/last_count
+        # print(label_map)
+        return -logits * 0.5, -logits * 0.5, last_acc / batch_size, last_count, last_acc_ch/last_count
