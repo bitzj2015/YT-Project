@@ -22,6 +22,7 @@ use_cuda = False
 if torch.cuda.is_available():
     use_cuda = True
 device = torch.device("cuda" if use_cuda else "cpu")
+print(use_cuda)
 
 with h5py.File(args.video_emb_path, "r") as hf_emb:
     video_embeddings = hf_emb["embeddings"][:].astype("float32")
@@ -29,7 +30,7 @@ with h5py.File(args.video_emb_path, "r") as hf_emb:
 yt_model = torch.load(
     args.ytmodel_path, 
     map_location=device
-)
+).to(device)
 
 
 env_args = EnvConfig(action_dim=video_embeddings.shape[0], device=device, agent_path=args.agent_path)
@@ -38,7 +39,7 @@ yt_model.device = device
 yt_model.video_embeddings = video_embeddings.to(device)
 yt_model.graph_embeddings.device = device
 yt_model.graph_embeddings.aggregator.device = device
-rl_model = A2Clstm(env_args, video_embeddings)
+rl_model = A2Clstm(env_args, video_embeddings).to(device)
 rl_optimizer = optim.Adam(rl_model.parameters(), lr=env_args.rl_lr)
 rl_agent = Agent(rl_model, rl_optimizer, env_args)
 
@@ -54,15 +55,17 @@ env = Env(env_args, yt_model, rl_agent, workers, seed=0)
 
 losses = []
 rewards = []
-for i in range(train_inputs.shape[0] // env_args.num_browsers):
-    for j in range(env_args.num_browsers):
-        env.workers[j].user_videos = train_inputs[i * env_args.num_browsers + j].tolist()
-    env.start_env()
-    loss, reward = env.rollout()
-    losses.append(loss)
-    rewards.append(reward)
-    print(f"Episode: {i}, loss: {loss}, reward: {reward}")
-    env.stop_env()
+for ep in range(50):
+    for i in range(train_inputs.shape[0] // env_args.num_browsers):
+        for j in range(env_args.num_browsers):
+            env.workers[j].user_videos = train_inputs[i * env_args.num_browsers + j].tolist()
+        env.start_env()
+        loss, reward = env.rollout()
+        losses.append(loss)
+        rewards.append(reward)
+        if i % 10 == 0:
+            print(f"Epoch: {ep}, episode: {i}, loss: {loss}, reward: {reward}")
+        env.stop_env()
 
 ray.shutdown()
 

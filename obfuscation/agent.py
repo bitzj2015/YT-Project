@@ -77,7 +77,7 @@ class Agent(object):
             # print(action.view(-1))
             log_prob = log_prob.gather(1, action)
             self.log_probs.append(log_prob.squeeze(1))
-            return action.view(-1)
+            return action.view(-1).tolist()
 
     # def get_reward(self, reward):
     #     self.rewards.append(torch.Tensor(reward).to(self.env_args.device))

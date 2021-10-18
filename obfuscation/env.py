@@ -119,8 +119,8 @@ class Env(object):
     def send_reward_to_workers(self):
         self.state = self.get_state_from_workers()
         self.base_state = self.get_base_state_from_workers()
-        cur_rec = self.yt_model.get_rec(self.state)
-        cur_rec_base = self.yt_model.get_rec(self.base_state)
+        cur_rec = self.yt_model.get_rec(torch.from_numpy(self.state).to(self.env_args.device))
+        cur_rec_base = self.yt_model.get_rec(torch.from_numpy(self.base_state).to(self.env_args.device))
         ray.get([self.workers[i].update_reward.remote(cur_rec_base[i], cur_rec[i]) for i in range(len(self.workers))])
 
     def get_next_obfuscation_videos(self, terminate=False):
