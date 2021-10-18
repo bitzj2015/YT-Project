@@ -152,7 +152,7 @@ class Env(object):
 
     def update_rl_agent(self, reward_only=True):
         if reward_only:
-            self.rl_agent.update_rewards(self.get_reward_from_workers())
+            self.rl_agent.update_rewards(self.get_reward_gain_from_workers())
         else:
             loss, _ = self.rl_agent.update_model()
             self.rl_agent.clear_actions()

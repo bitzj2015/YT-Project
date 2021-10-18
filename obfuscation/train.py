@@ -14,6 +14,8 @@ parser.add_argument('--video-emb', dest="video_emb_path", type=str, default="../
 parser.add_argument('--video-id', dest="video_id_path", type=str, default="../dataset/video_ids_final_filter.json")
 parser.add_argument('--train-data', dest="train_data_path", type=str, default="../dataset/train_data_final_filter.hdf5")
 parser.add_argument('--test-data', dest="test_data_path", type=str, default="../dataset/test_data_final.hdf5")
+parser.add_argument('--agent-path', dest="agent_path", type=str, default="./param/agent.pkl")
+parser.add_argument('--ytmodel-path', dest="ytmodel_path", type=str, default="/scratch/param/policy_no_graph_edge_reg_new73_100_out_64_001_atten_final_filter_aug.pt")
 args = parser.parse_args()
 
 use_cuda = False
@@ -25,12 +27,12 @@ with h5py.File(args.video_emb_path, "r") as hf_emb:
     video_embeddings = hf_emb["embeddings"][:].astype("float32")
 
 yt_model = torch.load(
-    "/scratch/param/policy_no_graph_edge_reg_new73_100_out_64_001_atten_final_filter_aug.pt", 
+    args.ytmodel_path, 
     map_location=device
 )
 
 
-env_args = EnvConfig(action_dim=video_embeddings.shape[0] // 100, device=device)
+env_args = EnvConfig(action_dim=video_embeddings.shape[0], device=device, agent_path=args.agent_path)
 video_embeddings = torch.from_numpy(video_embeddings).to(env_args.device)
 yt_model.device = device
 yt_model.video_embeddings = video_embeddings.to(device)
