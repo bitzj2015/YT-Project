@@ -49,6 +49,8 @@ class RolloutWorker(object):
             print("cur_reward: ", self.cur_rewards, list(self.global_rec.keys())[0:10], list(self.global_rec_base.keys())[0:10])
     
     def rollout(self, obfuscation_video=-1):
+        if self.user_step >= len(self.user_videos):
+            return
         if obfuscation_video == -1:
             video = self.user_videos[self.user_step]
             self.watch_history_base.append(video)
@@ -136,6 +138,7 @@ class Env(object):
         return self.base_state
 
     def rollout(self):
+        print("start rolling out")
         for _ in range(self.env_args.rollout_len):
             flag = random.random()
             if flag < self.env_args.alpha:
