@@ -9,11 +9,11 @@ with open(f"./results/train_log_{ALPHA}_{VERSION}.json", "r") as json_file:
 
 avg_data = []
 print(len(data))
-batch = 1
+batch = 110
 for i in range(len(data) // batch):
     avg_data.append(np.mean(data[i * batch: (i + 1) * batch]))
 plt.figure()
 plt.plot(avg_data)
-plt.xlabel("Episode")
+plt.xlabel("Epoch")
 plt.ylabel("Average accumulative reward (within [0,2])")
 plt.savefig(f"./results/train_{ALPHA}_{VERSION}.png")

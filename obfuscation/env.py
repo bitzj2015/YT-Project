@@ -105,8 +105,8 @@ class Env(object):
         # random.seed(self.seed)
         ray.get([worker.initial_profile.remote(self.env_args.his_len) for worker in self.workers])
 
-    def stop_env(self):
-        self.clear_env()
+    def stop_env(self, save_param=True):
+        self.clear_env(save_param=save_param)
         ray.get([worker.clear_worker.remote() for worker in self.workers])
         
     def get_reward_from_workers(self):
@@ -137,7 +137,7 @@ class Env(object):
         self.base_state = np.stack(ray.get([worker.get_base_state.remote(self.env_args.his_len) for worker in self.workers]))
         return self.base_state
 
-    def rollout(self):
+    def rollout(self, train_rl=True):
         print("start rolling out")
         for _ in range(self.env_args.rollout_len):
             flag = random.random()
@@ -149,7 +149,11 @@ class Env(object):
             else:
                 ray.get([self.workers[i].rollout.remote(-1) for i in range(len(self.workers))])
         self.get_next_obfuscation_videos(terminate=True)
-        loss = self.update_rl_agent(reward_only=False)
+        if train_rl:
+            loss = self.update_rl_agent(reward_only=False)
+        else:
+            loss = 0
+            self.rl_agent.clear_actions()
         mean_rewards = np.mean(self.get_reward_from_workers())
         return loss, mean_rewards
 
@@ -161,9 +165,10 @@ class Env(object):
             self.rl_agent.clear_actions()
             return loss
 
-    def clear_env(self):
+    def clear_env(self, save_param=True):
         self.all_rewards = []
         self.all_reward_gains = []
         self.all_watch_history_base = []
         self.all_watch_history = []
-        self.rl_agent.save_param()
+        if save_param:
+            self.rl_agent.save_param()

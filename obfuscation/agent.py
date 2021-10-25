@@ -55,13 +55,14 @@ class Agent(object):
         self.entropies = []
         self.terminate = False
         self.optimizer = optimizer
-
-    def take_action(self, state, terminate=False, is_training=True):
-        if is_training:
-            self.model.train()
-        else:
-            self.model.eval()
-
+    
+    def train(self):
+        self.model.train()
+        
+    def eval(self):
+        self.model.eval()
+        
+    def take_action(self, state, terminate=False):
         self.terminate = terminate
         self.state = state
         if self.terminate:
@@ -82,10 +83,8 @@ class Agent(object):
             self.log_probs.append(log_prob.squeeze(1))
             return action.view(-1).tolist()
 
-    # def get_reward(self, reward):
-    #     self.rewards.append(torch.Tensor(reward).to(self.env_args.device))
-
     def save_param(self):
+        print("saving rl agent")
         torch.save(self.model.state_dict(),self.env_args.agent_path)
 
     def update_rewards(self, rewards):
