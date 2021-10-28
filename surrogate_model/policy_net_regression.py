@@ -135,7 +135,7 @@ class PolicyNetRegression(torch.nn.Module):
             for j in range(num_rec):
                 if last_label[i][j] in label_map.keys():
                     label_map[last_label[i][j]] += 1
-                    last_acc += 1 * last_label_p[i][j]
+                    last_acc += 1 * 0.01 #* last_label_p[i][j]
                 if video2channel[last_label[i][j]] in channel_map.keys():
                     channel_map[video2channel[last_label[i][j]]] += 1
                     last_acc_ch += 1

@@ -83,7 +83,7 @@ def run_regression_epoch(model, dataloader, mode="train", optimizer=None, ep=0, 
             start_time = time.time()
             model.train()
             optimizer.zero_grad()
-            loss_pos, loss_neg, last_acc, last_count, last_acc_ch = model(input, last_label, last_label_p, last_label_type, mask, with_graph=use_graph)
+            loss_pos, loss_neg, last_acc, last_count, acc, count = model(input, label, label_type, last_label, last_label_p, last_label_type, mask, with_graph=use_graph)
             print("forward:", time.time()-start_time)
             loss_pos = loss_pos.mean(0)
             loss_neg = loss_neg.mean(0)
@@ -95,22 +95,66 @@ def run_regression_epoch(model, dataloader, mode="train", optimizer=None, ep=0, 
         else:
             # Forward computation 
             model.eval()
-            loss_pos, loss_neg, last_acc, last_count, last_acc_ch = model(input, last_label, last_label_p, last_label_type, mask, with_graph=use_graph)
+            loss_pos, loss_neg, last_acc, last_count, acc, count = model(input, label, label_type, last_label, last_label_p, last_label_type, mask, with_graph=use_graph)
             loss_pos = loss_pos.mean(0)
             loss_neg = loss_neg.mean(0)
             
         # Print training results
         stat[f"{mode}_last_acc"] += last_acc * last_count
-        stat[f"{mode}_last_acc_ch"] += last_acc_ch * last_count
+        stat[f"{mode}_acc"] += acc * count
         stat[f"{mode}_last_count"] += last_count
+        stat[f"{mode}_count"] += count
         stat[f"{mode}_loss_pos"] += loss_pos.item() * last_count
         stat[f"{mode}_loss_neg"] += loss_neg.item() * last_count
-        logger.info("{}ing, ep: {}, step: {}, loss_pos: {}, loss_neg: {}, home_acc: {}, ch_acc: {}.".format(mode, ep, i, loss_pos.item(), loss_neg.item(), last_acc, last_acc_ch))
+        logger.info("{}ing, ep: {}, step: {}, loss_pos: {}, loss_neg: {}, home_acc: {}, rec_acc: {}.".format(mode, ep, i, loss_pos.item(), loss_neg.item(), last_acc, acc))
     
     # Print final training results
     stat[f"{mode}_last_acc"] /= stat[f"{mode}_last_count"]
-    stat[f"{mode}_last_acc_ch"] /= stat[f"{mode}_last_count"]
+    stat[f"{mode}_acc"] /= stat[f"{mode}_count"]
     stat[f"{mode}_loss_pos"] /= stat[f"{mode}_last_count"]
     stat[f"{mode}_loss_neg"] /= stat[f"{mode}_last_count"]
-    logger.info("End {}ing, ep: {}, loss_pos: {}, loss_neg: {}, home_acc: {}, ch_acc: {}.".format(mode, ep, stat[f"{mode}_loss_pos"], stat[f"{mode}_loss_neg"], stat[f"{mode}_last_acc"], stat[f"{mode}_last_acc_ch"]))
+    logger.info("End {}ing, ep: {}, loss_pos: {}, loss_neg: {}, home_acc: {}, rec_acc: {}.".format(mode, ep, stat[f"{mode}_loss_pos"], stat[f"{mode}_loss_neg"], stat[f"{mode}_last_acc"], stat[f"{mode}_acc"]))
+    return stat
+
+
+def run_classifier_epoch(model, dataloader, mode="train", optimizer=None, ep=0, stat=None, logger=None, use_graph=False):
+    for i, batch in tqdm(enumerate(dataloader)):
+        # Get data
+        input, label, label_type, mask = batch["input"], batch["label"], batch["label_type"], batch["mask"]
+        last_label = batch["last_label"]
+        last_label_type = batch["last_label_type"]
+        logger.debug(input.size(), label.size(), label_type.size(), mask.size(), last_label.size(), last_label_type.size())
+
+        if mode == "train":
+            # Forward computation and back propagation
+            start_time = time.time()
+            model.train()
+            optimizer.zero_grad()
+            loss, acc, count, last_acc, last_count, last_rank = model(input, label, label_type, mask, with_graph=use_graph)
+            print("forward:", time.time()-start_time)
+            loss = loss.mean(0)
+            loss.backward()
+            optimizer.step()
+            print("backward:", time.time()-start_time)
+        else:
+            # Forward computation 
+            model.eval()
+            loss, acc, count, last_acc, last_count, last_rank = model(input, label, label_type, mask, with_graph=use_graph)
+            loss = loss.mean(0)
+            
+        # Print training results
+        stat[f"{mode}_acc"] += acc * count
+        stat[f"{mode}_count"] += count
+        stat[f"{mode}_last_acc"] += last_acc * last_count
+        stat[f"{mode}_last_rank"] += last_rank * last_count
+        stat[f"{mode}_last_count"] += last_count
+        stat[f"{mode}_loss"] += loss.item() * count
+        logger.info("{}ing, ep: {}, step: {}, loss: {}, acc: {}, home_acc: {}, home_rank: {}.".format(mode, ep, i, loss.item(), acc, last_acc, last_rank))
+    
+    # Print final training results
+    stat[f"{mode}_acc"] /= stat[f"{mode}_count"]
+    stat[f"{mode}_last_acc"] /= stat[f"{mode}_last_count"]
+    stat[f"{mode}_last_rank"] /= stat[f"{mode}_last_count"]
+    stat[f"{mode}_loss"] /= stat[f"{mode}_count"]
+    logger.info("End {}ing, ep: {}, loss: {}, acc: {}, home_acc: {}, home_rank: {}.".format(mode, ep, stat[f"{mode}_loss"], stat[f"{mode}_acc"], stat[f"{mode}_last_acc"], stat[f"{mode}_last_rank"]))
     return stat

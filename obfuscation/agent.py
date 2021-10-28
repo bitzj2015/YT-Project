@@ -20,7 +20,8 @@ class A2Clstm(torch.nn.Module):
             batch_first=True
         )
         self.critic_linear = nn.Linear(self.env_args.hidden_dim, 1)
-        self.actor_linear = nn.Linear(self.env_args.hidden_dim, self.env_args.action_dim)
+        # self.actor_linear = nn.Linear(self.env_args.hidden_dim, self.env_args.action_dim)
+        self.actor_linear = nn.Linear(self.env_args.hidden_dim, self.env_args.emb_dim)
 
     def forward(self, inputs):
         inputs, (hx, cx) = inputs
@@ -35,8 +36,10 @@ class A2Clstm(torch.nn.Module):
         # print(x.size())
         x, (hx, cx) = self.lstm(x, (hx, cx)) # Single step forward
         x = x.view(x.size(0), -1)
+        actor_out = torch.matmul(self.actor_linear(x), self.video_embeddings.t())
+        print(actor_out.size())
 
-        return self.critic_linear(x), self.actor_linear(x), hx, cx
+        return self.critic_linear(x), actor_out, hx, cx
 
 
 class Agent(object):
@@ -52,13 +55,14 @@ class Agent(object):
         self.entropies = []
         self.terminate = False
         self.optimizer = optimizer
-
-    def take_action(self, state, terminate=False, is_training=True):
-        if is_training:
-            self.model.train()
-        else:
-            self.model.eval()
-
+    
+    def train(self):
+        self.model.train()
+        
+    def eval(self):
+        self.model.eval()
+        
+    def take_action(self, state, terminate=False):
         self.terminate = terminate
         self.state = state
         if self.terminate:
@@ -74,15 +78,13 @@ class Agent(object):
             entropy = -(log_prob * prob).sum(1)
             self.entropies.append(entropy)
             action = prob.multinomial(num_samples=1).data
-            # print(action.view(-1))
+            print(action.view(-1))
             log_prob = log_prob.gather(1, action)
             self.log_probs.append(log_prob.squeeze(1))
             return action.view(-1).tolist()
 
-    # def get_reward(self, reward):
-    #     self.rewards.append(torch.Tensor(reward).to(self.env_args.device))
-
     def save_param(self):
+        print("saving rl agent")
         torch.save(self.model.state_dict(),self.env_args.agent_path)
 
     def update_rewards(self, rewards):
@@ -102,6 +104,8 @@ class Agent(object):
         avg_R = 0
 
         R = self.values[-1]
+        if len(self.rewards) == 0:
+            return 0, 0
         for i in reversed(range(len(self.rewards))):
             avg_R += self.rewards[i]
             R = GAMMA * R + self.rewards[i]
@@ -116,7 +120,7 @@ class Agent(object):
         self.optimizer.zero_grad()
 
         loss = policy_loss.sum() + 0.5 * value_loss.sum(0)
-        # print("loss: {}".format(loss.item()))
+        print("loss: {}, {}".format(policy_loss.sum().item(), value_loss.sum(0).item()))
         loss.backward(retain_graph=True)
         torch.nn.utils.clip_grad_norm(self.model.parameters(), 100)
         self.optimizer.step()

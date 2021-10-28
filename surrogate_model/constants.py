@@ -15,3 +15,6 @@ with open("../dataset/video_ids_final.json", "r") as json_file:
 video2channel = {}
 for video_id in video2channel_ids.keys():
     video2channel[video_ids[video_id]] = video2channel_ids[video_id]
+    
+with open("../dataset/video_adj_list_final_w.json", "r") as json_file:
+    video_graph_adj_mat = json.load(json_file)
