@@ -11,22 +11,22 @@ import ray
 
 emb_model = SentenceTransformer('all-MiniLM-L6-v2', device='cuda')
 
-VERSION = "_final"
+VERSION = "reddit"
 TYPE = ""
 MAX_LEN = 256
 
-with open(f"../dataset/video_metadata{VERSION}.json", "r") as json_file:
+with open(f"../dataset/video_metadata_{VERSION}.json", "r") as json_file:
     video_metadata = json.load(json_file)
 
-with open(f"../dataset/video_stat{VERSION}.json", "r") as json_file:
+with open(f"../dataset/video_stat_{VERSION}.json", "r") as json_file:
     video_stat = json.load(json_file)
 
 id_videos = dict(zip([i for i in range(len(video_stat.keys()))], video_stat.keys()))
-with open(f"../dataset/id_videos{VERSION}.json", "w") as json_file:
+with open(f"../dataset/id_videos_{VERSION}.json", "w") as json_file:
     json.dump(id_videos, json_file)
 
 video_ids = dict(zip(video_stat.keys(), [i for i in range(len(video_stat.keys()))]))
-with open(f"../dataset/video_ids{VERSION}.json", "w") as json_file:
+with open(f"../dataset/video_ids_{VERSION}.json", "w") as json_file:
     json.dump(video_ids, json_file)
 
 embeddings = []
@@ -65,7 +65,7 @@ embeddings = get_embedding(video_texts, emb_model)
 
 embeddings = np.concatenate(embeddings, axis=0)
 print(np.shape(embeddings))
-hf = h5py.File(f"../dataset/video_embeddings{VERSION}{TYPE}.hdf5", "w")
+hf = h5py.File(f"../dataset/video_embeddings_{VERSION}{TYPE}.hdf5", "w")
 hf.create_dataset('embeddings', data=embeddings)
 hf.create_dataset('video_ids', data=list(video_ids.keys()))
 hf.close()
