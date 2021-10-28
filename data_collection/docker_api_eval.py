@@ -52,21 +52,18 @@ class docker_api(object):
         return 1 
 
 
-def run_docker(seed_videos, N=30, dump_root="/home/user/Desktop/crawls", real_root="$PWD/docker-volume/crawls_new_30", timeout=28, image="ytdriver:latest", shm_size="512m", logger=None):
+def run_docker(user_video_seqs, dump_root="/home/user/Desktop/crawls", real_root="$PWD/docker-volume/crawls_reddit", timeout=38, image="ytdriver:latest", shm_size="512m", logger=None):
     d_api = []
-    for user_key in seed_videos:
-        seed_video = seed_videos[user_key]
+    for user_key in user_video_seqs:
         cfg = {}
-        cfg["seed_video"] = seed_video
+        cfg["video_seq"] = user_video_seqs[user_key]
+        video_seq = json.dumps(user_video_seqs[user_key])
         cfg["user_id"] = user_key
-        cfg["N"] = N
-        L = random.randint(5, 15)
-        cfg["L"] = L
         cfg["real_root"] = real_root
         cfg["dump_root"] = dump_root
         cfg["image"] = image
         cfg["shm_size"] = shm_size
-        cfg["cmd"] = f"timeout {timeout}m /usr/bin/python3 /opt/crawler.py --N {N} --L {L} --seed-video {seed_video} --save-dir {user_key}"
+        cfg["cmd"] = f"timeout {timeout}m /usr/bin/python3 /opt/crawler_eval.py --video-seq '{video_seq}' --save-dir {user_key}"
         d_api.append(docker_api.remote(cmd=cfg["cmd"], cfg=cfg, logger=logger))
         os.system(f"mkdir -p {real_root}/{user_key}")
         os.system(f"touch {real_root}/{user_key}/log.txt")
@@ -76,17 +73,22 @@ def run_docker(seed_videos, N=30, dump_root="/home/user/Desktop/crawls", real_ro
 
 
 if __name__ == "__main__":
-    videos = pd.read_csv('videos.csv')['video_id']
+    random.seed(0)
+    with open("../dataset/sample_reddit_traces.json", "r") as json_file:
+        reddit_user_data = json.load(json_file)
+    
+    users = list(reddit_user_data.keys())
+    sample_users = random.sample(users, 1500)
     count = 0
     batch = []
-    seed_videos = {}
-    for i in range(10000-3050):
-        seed_id = videos.sample(1).iloc[0]
-        seed_videos[f"user_{i+3050}"] = seed_id
+    video_seqs = {}
+    for user in sample_users:
+        video_seq = reddit_user_data[user]
+        video_seqs[f"{user}_{count}"] = video_seq
         count += 1
-        if count % 100 == 0:
-            batch.append(seed_videos)
-            seed_videos = {}
+        if count % 150 == 0:
+            batch.append(video_seqs)
+            video_seqs = {}
         
     logging.basicConfig(
         filename=f"./logs/log.txt",
@@ -101,4 +103,3 @@ if __name__ == "__main__":
         ray.init()
         run_docker(batch[i], logger=logger)
         ray.shutdown()
-        # break

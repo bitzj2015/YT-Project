@@ -6,11 +6,12 @@ import ray
 import logging
 import argparse
 
+VERSION = "reddit"
 parser = argparse.ArgumentParser(description='get metadata.')
-parser.add_argument('--log', type=str, dest="log_path", help='log path', default="./logs/log_metadata_final.txt")
-parser.add_argument('--data', type=str, dest="sock_puppet_path", help='sock puppet path', default="../dataset/sock_puppets_final.json")
-parser.add_argument('--video', type=str, dest="video_id_path", help='video id path', default="../dataset/video_stat_final.json")
-parser.add_argument('--metadata', type=str, dest="video_metadata_path", help='video metadata path', default="../dataset/video_metadata_final.json")
+parser.add_argument('--log', type=str, dest="log_path", help='log path', default=f"./logs/log_metadata_{VERSION}.txt")
+parser.add_argument('--data', type=str, dest="sock_puppet_path", help='sock puppet path', default=f"../dataset/sock_puppets_{VERSION}.json")
+parser.add_argument('--video', type=str, dest="video_id_path", help='video id path', default=f"../dataset/video_stat_{VERSION}.json")
+parser.add_argument('--metadata', type=str, dest="video_metadata_path", help='video metadata path', default=f"../dataset/video_metadata_{VERSION}.json")
 
 args = parser.parse_args()
 
@@ -118,7 +119,7 @@ def get_all_metadata(
     # Get video list
     video_id_list = list(video_ids.keys())
     print(len(video_id_list))
-    num_cpus = os.cpu_count() * 2
+    num_cpus = os.cpu_count()
     batch_size = len(video_id_list) // num_cpus + 1
 
     logger.info("Start getting metadata for videos.")

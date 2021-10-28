@@ -105,22 +105,30 @@ class YTDriver:
     def play_video(self, video, duration=5):
         # this function returns when the video starts playing
         try:
-            self.__click_video(video)
+            ret = self.__click_video(video)
+            if not ret:
+                self.__log("Fail to ply video, return...")
+                return
             self.__click_play_button()
             self.__handle_ads()
             self.__clear_prompts()
             sleep(duration)
+            # self.__click_stop_button()
         except Exception as e:
             self.__log(e)
 
     def get_recommendations(self, topn=5):
         # wait for recommendations to appear
-        elems = WebDriverWait(self.driver, 30).until(
-            EC.presence_of_all_elements_located((By.TAG_NAME, 'ytd-compact-video-renderer'))
-        )
-
+        try:
+            elems = WebDriverWait(self.driver, 15).until(
+                EC.presence_of_all_elements_located((By.TAG_NAME, 'ytd-compact-video-renderer'))
+            )
+            return [Video(elem, elem.find_elements_by_tag_name('a')[0].get_attribute('href')) for elem in elems[:topn]]
+        except Exception as e:
+            self.__log(e)
+            return []
         # recommended videos array
-        return [Video(elem, elem.find_elements_by_tag_name('a')[0].get_attribute('href')) for elem in elems[:topn]]
+        
 
     def save_screenshot(self, filename):
         return self.driver.save_screenshot(filename)
@@ -131,36 +139,100 @@ class YTDriver:
             self.logger.info(message)
 
     def __click_video(self, video):
+        self.tab_restart_browser()
         if type(video) == Video:
             self.__log(f"Start watching video {video.videoId}...")
             try:
                 # try to click the element using selenium
                 self.__log("Clicking element via Selenium...")
                 video.elem.click()
-                return
+                return True
             except Exception as e:
                 self.__log(e)
                 try:
                     # try to click the element using javascript
                     self.__log("Failed. Clicking via Javascript...")
                     self.driver.execute_script('arguments[0].click()', video.elem)
-                except:
+                    return True
+                except Exception as e:
                     # js click failed, just open the video url
-                    self.__log(f"Failed. Loading video URL {video.url}...")
-                    self.driver.get(video.url)
+                    self.__log(e)
+                    try:
+                        self.__log(f"Failed. Loading video URL {video.url}...")
+                        self.driver.get(video.url)
+                        return True
+                    except Exception as e:
+                        self.__log(e)
+                        return False
+
         elif type(video) == str:
             self.__log(f"Start watching video {video}...")
-            if video.startswith('https://www.youtube.com/watch?'):
-                self.driver.get(video)
-            else:
-                self.driver.get(f"https://www.youtube.com/watch?v={video}")
+            # if video.startswith('https://www.youtube.com/watch?'):
+            #     self.driver.get(video)
+            # else:
+            #     self.driver.get(f"https://www.youtube.com/watch?v={video}")
+            self.driver.get(f"https://www.youtube.com/results?search_query={video}")
+            try:
+                elems = WebDriverWait(self.driver, 15).until(
+                    EC.presence_of_all_elements_located((By.TAG_NAME, 'ytd-video-renderer'))
+                )
+                elem = elems[0]
+                video_id_found = elem.find_elements_by_tag_name('a')[0].get_attribute('href')
+                elem.click()
+                self.__log(f"Found video {video_id_found}")
+                return True
+            except:
+                self.__log(f"Video {video} is not found...")
+                return False
         else:
             raise ValueError('Unsupported video parameter!')
+
+    def close_other_windows(self):
+        """
+        close all open pop-up windows and tabs other than the current one
+        """
+        main_handle = self.driver.current_window_handle
+        windows = self.driver.window_handles
+        if len(windows) > 1:
+            for window in windows:
+                if window != main_handle:
+                    self.driver.switch_to.window(window)
+                    self.driver.close()
+            self.driver.switch_to.window(main_handle)
+
+    def tab_restart_browser(self):
+        self.close_other_windows()
+
+        if self.driver.current_url.lower() == "about:blank":
+            return
+
+        # Create a new window.  Note that it is not practical to use
+        # noopener here, as we would then be forced to specify a bunch of
+        # other "features" that we don't know whether they are on or off.
+        # Closing the old window will kill the opener anyway.
+        self.driver.execute_script("window.open('')")
+
+        # This closes the _old_ window, and does _not_ switch to the new one.
+        self.driver.close()
+
+        # The only remaining window handle will be for the new window;
+        # switch to it.
+        assert len(self.driver.window_handles) == 1
+        self.driver.switch_to.window(self.driver.window_handles[0])
 
     def __click_play_button(self):
         try:
             playBtn = self.driver.find_elements_by_class_name('ytp-play-button')
             if 'Play' in playBtn[0].get_attribute('title'):
+                playBtn[0].click()
+                self.__log("succeed to play")
+        except:
+            pass
+
+    def __click_stop_button(self):
+        try:
+            playBtn = self.driver.find_elements_by_class_name('ytp-play-button')
+            if 'Pause' in playBtn[0].get_attribute('title'):
                 playBtn[0].click()
         except:
             pass
@@ -218,7 +290,12 @@ class YTDriver:
         options = ChromeOptions()
         options.add_argument('--no-sandbox')
         options.add_argument('--window-size=1920,1080')
-
+        # options.add_argument("start-maximized")
+        # options.add_argument("disable-infobars")
+        # options.add_argument("--disable-extensions")
+        # options.add_argument('--disable-application-cache')
+        # options.add_argument('--disable-gpu')
+        # options.add_argument("--disable-dev-shm-usage")
         if profile_dir is not None:
             options.add_argument('--user-data-dir=%s' % profile_dir)
         if headless:

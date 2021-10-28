@@ -4,10 +4,13 @@ import os
 import subprocess
 import logging
 from tqdm import tqdm
-import random
+import argparse
 
+parser = argparse.ArgumentParser(description='get metadata.')
+parser.add_argument('--version', type=str, dest="version", help='dataset version', default="reddit")
+args = parser.parse_args()
 
-TAG = "_final"
+VERSION = args.version
 
 logging.basicConfig(
     filename="./logs/log_videotext.txt",
@@ -26,7 +29,7 @@ def get_video_transcript(video_text_url: list):
         subprocess.run(["youtube-dl", "--write-auto-sub", "--skip-download", f"https://www.youtube.com/watch?v={video_id}", "--output", f"../dataset/trans_en/{video_id}"], stdout=subprocess.PIPE).stdout
 
 def get_all_video_transcript(
-    video_metadata_path: str=f"../dataset/video_metadata{TAG}.json"
+    video_metadata_path: str=f"../dataset/video_metadata_{VERSION}.json"
 ):
     with open(video_metadata_path, "r") as json_file:
         video_metadata = json.load(json_file)
@@ -44,11 +47,11 @@ def get_all_video_transcript(
     batch_size = len(video_id_list) // num_cpus + 1
 
     logger.info("Start getting text.")
-    # ray.init()
-    # ray.get(
-    #     [get_video_transcript.remote(video_id_list[i*batch_size: (i+1)*batch_size]) for i in range(num_cpus)]
-    # )
-    # ray.shutdown()
+    ray.init()
+    ray.get(
+        [get_video_transcript.remote(video_id_list[i*batch_size: (i+1)*batch_size]) for i in range(num_cpus)]
+    )
+    ray.shutdown()
 
 if __name__=="__main__":
-    get_all_video_transcript(f"../dataset/video_metadata{TAG}.json")
+    get_all_video_transcript(f"../dataset/video_stat_{VERSION}.json")

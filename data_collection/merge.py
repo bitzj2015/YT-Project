@@ -20,7 +20,7 @@ puppet = [
 }
 ]
 
-root_dir = "../../YT-Driver/docker-volume/crawls_new"
+root_dir = "./docker-volume/crawls_reddit"
 for user_dir in tqdm(os.listdir(root_dir)):
     try:
         for filename in os.listdir(f"{root_dir}/{user_dir}"):
@@ -32,5 +32,5 @@ for user_dir in tqdm(os.listdir(root_dir)):
         continue
 
 print("Totoal number of valid sock puppets: {}".format(len(puppet[2]["data"])))
-with open("../dataset/sock_puppets_final.json", "w") as json_file:
+with open("../dataset/sock_puppets_reddit.json", "w") as json_file:
     json.dump(puppet, json_file)

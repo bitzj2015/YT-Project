@@ -16,7 +16,7 @@ logger=logging.getLogger()
 logger.setLevel(logging.INFO) 
 
 VERSION = "_final"
-FILTER = "_filter_p"
+FILTER = "_filter_p_large"
 with open(f"../dataset/sock_puppets{VERSION}.json", "r") as json_file:
     data = json.load(json_file)[2]["data"]
 
@@ -30,7 +30,7 @@ def sample_false_label(
 ):
     ret = label
     true_label = dict(zip(ret, [0 for _ in range(len(ret))]))
-    false_label = list(np.random.randint(num_labels, size=max_label_len+len(label)))
+    false_label = list(np.random.randint(num_labels, size=max_label_len + 10 * len(label)))
 
     idx = 0
     while len(ret) < max_label_len:
@@ -96,8 +96,7 @@ for i in tqdm(range(len(data))):
                 label_type.append(1)
             
             # Label_type: 0 -> true label, 1 -> false label
-            for _ in range(max_label_len-len(label_type)):
-                label_type.append(0)
+            label_type += [0 for _ in range(max_label_len-len(label_type))]
 
             # Generate false labels
             label = sample_false_label(label, len(video_ids.keys()), max_label_len)
@@ -125,13 +124,13 @@ for i in tqdm(range(len(data))):
         last_label_type = [1 for _ in range(len(last_label))]
 
         # Label_type: 0 -> true label, 1 -> false label
-        for _ in range(max_label_len-len(last_label_type)):
-            last_label_type.append(0)
+        last_label_type += [0 for _ in range(max_label_len * 10 - len(last_label_type))]
 
         # Generate false labels
-        last_label = sample_false_label(last_label, len(video_ids.keys()), max_label_len)
-        last_label_p += [0 for _ in range(max_label_len - len(last_label_p))]
+        last_label = sample_false_label(last_label, len(video_ids.keys()), max_label_len * 10)
         last_label_p = [value/ sum(last_label_p) for value in last_label_p]
+        last_label_p += [0 for _ in range(max_label_len * 10 - len(last_label_p))]
+        
         # Append zero matrix if the length of label list is smaller than max_trail_len
         if len(label_data) < max_trail_len:
             for _ in range(max_trail_len-len(label_data)):
