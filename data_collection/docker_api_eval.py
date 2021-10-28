@@ -78,11 +78,13 @@ if __name__ == "__main__":
         reddit_user_data = json.load(json_file)
     
     users = list(reddit_user_data.keys())
-    sample_users = random.sample(users, 1500)
+    sample_users = random.sample(users, 15000)
     count = 0
     batch = []
     video_seqs = {}
     for user in sample_users:
+        if count < 1500:
+            continue
         video_seq = reddit_user_data[user]
         video_seqs[f"{user}_{count}"] = video_seq
         count += 1

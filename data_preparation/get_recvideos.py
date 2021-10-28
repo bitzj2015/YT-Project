@@ -5,12 +5,13 @@ import ray
 import os
 import argparse
 
-TAG = "_final"
 parser = argparse.ArgumentParser(description='get recvideo.')
 parser.add_argument('--start', type=int, dest="start", help='start point', default=0)
-parser.add_argument('--end', type=int, dest="end", help='end_point', default=60000)
+parser.add_argument('--end', type=int, dest="end", help='end_point', default=1000000)
+parser.add_argument('--version', type=str, dest="version", help='dataset version', default="reddit")
 args = parser.parse_args()
 
+VERSION = args.version
 @ray.remote
 def get_recvideos(video_id_list: list):
     for video_id in tqdm(video_id_list):
@@ -21,7 +22,7 @@ def get_recvideos(video_id_list: list):
             continue
 
 def get_recvideos_all(
-    video_id_path=f"../dataset/video_ids{TAG}.json"
+    video_id_path=f"../dataset/video_ids_{VERSION}.json"
 ):
     with open(video_id_path, "r") as json_file:
         video_ids = json.load(json_file)
@@ -38,7 +39,7 @@ def get_recvideos_all(
             video_ids_new[video_id] = 0
             count_remain += 1
     print("No. of existing videos: {}, No. of remaining videos: {}".format(count, count_remain))
-    with open(f"../dataset/video_ids{TAG}_remain.json", "w") as json_file:
+    with open(f"../dataset/video_ids_{VERSION}_remain.json", "w") as json_file:
         json.dump(video_ids_new, json_file)
     
     video_id_list = list(video_ids_new.keys())[args.start:]
@@ -51,4 +52,4 @@ def get_recvideos_all(
     )
     ray.shutdown()
 
-get_recvideos_all(f"../dataset/video_ids{TAG}.json")
+get_recvideos_all(f"../dataset/video_ids_{VERSION}.json")
