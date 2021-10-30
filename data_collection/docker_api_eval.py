@@ -74,24 +74,44 @@ def run_docker(user_video_seqs, dump_root="/home/user/Desktop/crawls", real_root
 
 if __name__ == "__main__":
     random.seed(0)
-    with open("../dataset/sample_reddit_traces.json", "r") as json_file:
-        reddit_user_data = json.load(json_file)
-    
-    users = list(reddit_user_data.keys())
-    sample_users = random.sample(users, 15000)
-    count = 0
+    task = "reddit_crawl"
     batch = []
-    video_seqs = {}
-    for user in sample_users:
-        if count < 1500:
-            continue
-        video_seq = reddit_user_data[user]
-        video_seqs[f"{user}_{count}"] = video_seq
-        count += 1
-        if count % 150 == 0:
-            batch.append(video_seqs)
-            video_seqs = {}
+    if task == "reddit_crawl":
+        with open("../dataset/sample_reddit_traces.json", "r") as json_file:
+            reddit_user_data = json.load(json_file)
         
+        users = list(reddit_user_data.keys())
+        sample_users = random.sample(users, 10000)
+        count = 0
+        
+        video_seqs = {}
+
+        for user in sample_users:
+            if count < 4650:
+                count += 1
+                continue
+            video_seq = reddit_user_data[user]
+            video_seqs[f"{user}_{count}"] = video_seq
+            count += 1
+            if count % 150 == 0:
+                batch.append(video_seqs)
+                video_seqs = {}
+
+    elif task == "rl_eval":
+        with open("../obfuscation/results/test_user_trace_0.2_all_new.json", "r") as json_file:
+            rl_user_data = json.load(json_file)
+    
+        video_seqs = {}
+        batch = []
+        # for i in range(150):
+        #     video_seqs[f"base_{i}"] = rl_user_data["base"][str(i)]
+        # batch.append(video_seqs)
+
+        video_seqs = {}
+        for i in range(150):
+            video_seqs[f"obfu_{i}"] = rl_user_data["obfu"][str(i)]
+        batch.append(video_seqs)
+    
     logging.basicConfig(
         filename=f"./logs/log.txt",
         filemode='w',
@@ -101,6 +121,7 @@ if __name__ == "__main__":
     )
     logger=logging.getLogger() 
     logger.setLevel(logging.INFO)
+
     for i in tqdm(range(len(batch))):
         ray.init()
         run_docker(batch[i], logger=logger)

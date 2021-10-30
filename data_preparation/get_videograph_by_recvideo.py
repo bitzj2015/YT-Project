@@ -49,15 +49,15 @@ def parse_recvideo(recvideo_file_list: list, video_ids: dict):
             stat["avg_hit_rate"].append(cnt/cnt_all)
         except:
             continue
-    print("avg_num_edges: {}, avg_hit_rate: {}.".format(np.mean(stat["avg_num_edges"]), np.mean(stat["avg_hit_rate"])))
+    # print("avg_num_edges: {}, avg_hit_rate: {}.".format(np.mean(stat["avg_num_edges"]), np.mean(stat["avg_hit_rate"])))
     return video_video_edge
 
 
-VERSION = "_final"
+VERSION = "_reddit"
 
 with open(f"../dataset/video_ids{VERSION}.json", "r") as json_file:
     video_ids = json.load(json_file)
-
+print(max(list(video_ids.values())))
 num_cpu = os.cpu_count()
 
 logger.info("Start building graph edges.")

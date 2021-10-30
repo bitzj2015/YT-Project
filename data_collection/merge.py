@@ -20,17 +20,19 @@ puppet = [
 }
 ]
 
-root_dir = "./docker-volume/crawls_reddit"
-for user_dir in tqdm(os.listdir(root_dir)):
+VERSION = "rl"
+root_dir = f"./docker-volume/crawls_{VERSION}"
+for user_dir in sorted(tqdm(os.listdir(root_dir))):
     try:
         for filename in os.listdir(f"{root_dir}/{user_dir}"):
             if filename.startswith("trail"):
                 with open(f"{root_dir}/{user_dir}/{filename}") as json_file:
                     data = json.load(json_file)
                 puppet[2]["data"].append(data)
+                print(len(data["viewed"]), user_dir)
     except:
         continue
 
 print("Totoal number of valid sock puppets: {}".format(len(puppet[2]["data"])))
-with open("../dataset/sock_puppets_reddit.json", "w") as json_file:
+with open(f"../dataset/sock_puppets_{VERSION}.json", "w") as json_file:
     json.dump(puppet, json_file)

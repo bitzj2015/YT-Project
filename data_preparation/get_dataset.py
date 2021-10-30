@@ -15,7 +15,7 @@ logging.basicConfig(
 logger=logging.getLogger() 
 logger.setLevel(logging.INFO) 
 
-VERSION = "_final"
+VERSION = "_reddit"
 FILTER = "_filter_p_large"
 with open(f"../dataset/sock_puppets{VERSION}.json", "r") as json_file:
     data = json.load(json_file)[2]["data"]
@@ -117,7 +117,7 @@ for i in tqdm(range(len(data))):
                 if video_id not in home_video_ids.keys():
                     home_video_ids[video_id] = 0
                 home_video_ids[video_id] += 1
-        # print(len(home_video_ids))
+
         home_video_ids = {k : v for k, v in sorted(home_video_ids.items(), key=lambda item: item[1], reverse=True)}
         last_label = [video_ids[video_id] for video_id in list(home_video_ids.keys())[0:topk_home]]
         last_label_p = [value for value in list(home_video_ids.values())[0:topk_home]]

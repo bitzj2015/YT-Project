@@ -10,7 +10,7 @@ args = parser.parse_args()
 
 
 
-VERSION = "_reddit"
+VERSION = "_final"
 with open(f"../dataset/sock_puppets{VERSION}.json", "r") as json_file:
     data = json.load(json_file)[2]["data"]
 # Parse video trails
