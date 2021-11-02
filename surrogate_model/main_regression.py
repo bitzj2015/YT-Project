@@ -3,6 +3,7 @@ from graph_encoder import GraphEncoder
 from graph_aggregator import GraphAggregator
 from policy_net_regression import PolicyNetRegression
 from utils import *
+from constants import VERSION, TAG
 import torch.optim as optim
 import logging
 import argparse
@@ -10,11 +11,11 @@ torch.manual_seed(0)
 
 
 parser = argparse.ArgumentParser(description='run regression.')
-parser.add_argument('--video-emb', dest="video_emb_path", type=str, default="../dataset/video_embeddings_final_aug.hdf5")
-parser.add_argument('--video-graph', dest="video_graph_path", type=str, default="../dataset/video_adj_list_final_w.json")
-parser.add_argument('--video-id', dest="video_id_path", type=str, default="../dataset/video_ids_final.json")
-parser.add_argument('--train-data', dest="train_data_path", type=str, default="../dataset/train_data_final_filter_p.hdf5")
-parser.add_argument('--test-data', dest="test_data_path", type=str, default="../dataset/test_data_final_filter_p.hdf5")
+parser.add_argument('--video-emb', dest="video_emb_path", type=str, default=f"../dataset/video_embeddings_{VERSION}_aug.hdf5")
+parser.add_argument('--video-graph', dest="video_graph_path", type=str, default=f"../dataset/video_adj_list_{VERSION}_w.json")
+parser.add_argument('--video-id', dest="video_id_path", type=str, default=f"../dataset/video_ids_{VERSION}.json")
+parser.add_argument('--train-data', dest="train_data_path", type=str, default=f"../dataset/train_data_{VERSION}{TAG}.hdf5")
+parser.add_argument('--test-data', dest="test_data_path", type=str, default=f"../dataset/test_data_{VERSION}{TAG}.hdf5")
 parser.add_argument('--ep', dest="epoch", type=int, default=30)
 parser.add_argument('--bs', dest="batch_size", type=int, default=256)
 parser.add_argument('--lr', dest="lr", type=float, default=0.001)

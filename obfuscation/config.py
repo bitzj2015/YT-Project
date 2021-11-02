@@ -12,13 +12,14 @@ class EnvConfig(object):
         kernel_dim=150,
         dropout=0.2,
         lstm_num_layer=2,
-        rollout_len=30,
+        rollout_len=40,
         GAMMA=0.99,
         T=1,
         rl_lr=0.001,
         action_dim=100,
         device="cpu",
-        agent_path="./param/agent.pkl"
+        agent_path="./param/agent.pkl", 
+        logger=None
     ):
         self.num_browsers = num_browsers
         self.alpha = alpha
@@ -37,3 +38,4 @@ class EnvConfig(object):
         self.action_dim = action_dim
         self.device = device
         self.agent_path = agent_path
+        self.logger = logger

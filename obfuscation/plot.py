@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 ALPHA = 0.2
-VERSION = "all"
+VERSION = "reddit_new"
 with open(f"./results/train_log_{ALPHA}_{VERSION}.json", "r") as json_file:
     data = json.load(json_file)["reward"]
 

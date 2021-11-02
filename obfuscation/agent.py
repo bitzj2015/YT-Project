@@ -78,7 +78,7 @@ class Agent(object):
             entropy = -(log_prob * prob).sum(1)
             self.entropies.append(entropy)
             action = prob.multinomial(num_samples=1).data
-            print(action.view(-1))
+            # print(action.view(-1))
             log_prob = log_prob.gather(1, action)
             self.log_probs.append(log_prob.squeeze(1))
             return action.view(-1).tolist()

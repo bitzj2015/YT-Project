@@ -58,6 +58,7 @@ def load_dataset(
                 transform=ToTensor()
             )
             dataset_size = len(dataset)
+            print(dataset_size)
             val_dataset_size = int(0.5 * dataset_size)
             test_dataset_size = dataset_size - val_dataset_size
             test_dataset, val_dataset = torch.utils.data.random_split(dataset, [test_dataset_size, val_dataset_size], generator=torch.Generator().manual_seed(0))
