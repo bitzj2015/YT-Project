@@ -1,5 +1,6 @@
 import json
 import argparse
+from os import remove
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -10,7 +11,7 @@ args = parser.parse_args()
 
 
 
-VERSION = "_final"
+VERSION = "_reddit"
 with open(f"../dataset/sock_puppets{VERSION}.json", "r") as json_file:
     data = json.load(json_file)[2]["data"]
 # Parse video trails
@@ -19,9 +20,35 @@ view_video_id = {}
 home_video_id = {}
 false_cnt = 0
 initial_home_video_ids = {}
+unique_home_video_id = {}
 for i in tqdm(range(len(data))):
     initial_home_video_ids.update(dict(zip(data[i]["initial_homepage"], [1 for _ in range(len(data[i]["initial_homepage"]))])))
+    video_views = data[i]["homepage"]
+    tmp = {}
+    for video_view in video_views:
+        for video_id in video_view:
+            if video_id in initial_home_video_ids.keys():
+                continue
+            if video_id not in unique_home_video_id.keys():
+                unique_home_video_id[video_id] = 0
+            if video_id not in tmp.keys():
+                tmp[video_id] = 1
+                unique_home_video_id[video_id] += 1
+            else:
+                tmp[video_id] = 1
+
 print(len(initial_home_video_ids))
+
+removed_videos = []
+for video in unique_home_video_id.keys():
+    if unique_home_video_id[video] > 10 and unique_home_video_id[video] < 1000:
+        removed_videos.append(video)
+for video in removed_videos:
+    del unique_home_video_id[video]
+
+print(len(unique_home_video_id))
+
+
 for i in tqdm(range(len(data))):
     try:
         # Viewed videos
@@ -37,6 +64,8 @@ for i in tqdm(range(len(data))):
         for video_view in video_views:
             for video_id in video_view:
                 if video_id in initial_home_video_ids.keys():
+                    continue
+                if video_id in unique_home_video_id.keys():
                     continue
                 if video_id not in home_video_id.keys():
                     home_video_id[video_id] = 0

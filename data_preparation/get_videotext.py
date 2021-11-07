@@ -7,7 +7,7 @@ from tqdm import tqdm
 import argparse
 
 parser = argparse.ArgumentParser(description='get metadata.')
-parser.add_argument('--version', type=str, dest="version", help='dataset version', default="reddit")
+parser.add_argument('--version', type=str, dest="version", help='dataset version', default="rl_new")
 args = parser.parse_args()
 
 VERSION = args.version

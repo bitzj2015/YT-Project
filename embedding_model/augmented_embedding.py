@@ -3,7 +3,8 @@ import numpy as np
 import h5py
 from tqdm import tqdm
 
-VERSION = "_final"
+VERSION = "_reddit"
+LOAD_METADATA = True
 
 with open(f"../dataset/video_metadata{VERSION}.json", "r") as json_file:
     video_metadata = json.load(json_file)
@@ -11,7 +12,7 @@ with open(f"../dataset/video_metadata{VERSION}.json", "r") as json_file:
 with open(f"../dataset/video_stat{VERSION}.json", "r") as json_file:
     video_stat = json.load(json_file)
 
-
+print(len(video_stat))
 id_videos = dict(zip([i for i in range(len(video_stat.keys()))], video_stat.keys()))
 with open(f"../dataset/id_videos{VERSION}.json", "w") as json_file:
     json.dump(id_videos, json_file)
@@ -23,7 +24,16 @@ with open(f"../dataset/video_ids{VERSION}.json", "w") as json_file:
 categories = []
 view_counts = []
 average_ratings = []
-category_ids = {"none": 0, "*": 1}
+if LOAD_METADATA:
+    with open(f"../dataset/metadata_final.json", "r") as json_file:
+        metadata = json.load(json_file)
+        category_ids = metadata["category"]
+        mean_average_ratings = metadata["mean_average_ratings"]
+        std_average_ratings = metadata["std_average_ratings"]
+        mean_view_counts = metadata["mean_view_counts"]
+        std_view_counts = metadata["std_view_counts"]
+else:
+    category_ids = {"none": 0, "*": 1}
 video2channel = {}
 channel2video = {}
 for idx in sorted(id_videos.keys()):
@@ -31,9 +41,10 @@ for idx in sorted(id_videos.keys()):
     try:
         cate = video_metadata[video_id]["categories"]
         if cate != "":
-            if cate not in category_ids.keys():
-                category_ids[cate] = category_ids["*"]
-                category_ids["*"] += 1
+            if  not LOAD_METADATA:
+                if  cate not in category_ids.keys():
+                    category_ids[cate] = category_ids["*"]
+                    category_ids["*"] += 1
             categories.append(category_ids[cate])
         else:
             categories.append(0)
@@ -68,10 +79,28 @@ max_cate = np.max(categories) + 1
 I = np.eye(max_cate)
 one_hot_categories = I[categories]
 
-average_ratings = (average_ratings - np.mean(average_ratings)) / (np.std(average_ratings) + 1e-10)
-view_counts = (view_counts - np.mean(view_counts)) / (np.std(view_counts) + 1e-10)
-print(np.mean(average_ratings), np.std(average_ratings), np.max(average_ratings), np.min(average_ratings))
-print(np.mean(view_counts), np.std(view_counts), np.max(view_counts), np.min(view_counts))
+if LOAD_METADATA:
+    average_ratings = (average_ratings - mean_average_ratings) / (std_average_ratings + 1e-10)
+    view_counts = (view_counts - mean_view_counts) / (std_view_counts + 1e-10)
+    print(mean_average_ratings, std_average_ratings, mean_view_counts, std_view_counts)
+    print(np.mean(average_ratings), np.std(average_ratings), np.max(average_ratings), np.min(average_ratings))
+    print(np.mean(view_counts), np.std(view_counts), np.max(view_counts), np.min(view_counts))
+else:
+    with open(f"../dataset/metadata{VERSION}.json", "w") as json_file:
+        json.dump({
+            "category": category_ids,
+            "mean_average_ratings": np.mean(average_ratings),
+            "std_average_ratings": np.std(average_ratings),
+            "mean_view_counts": np.mean(view_counts),
+            "std_view_counts": np.std(view_counts)},
+            json_file)
+    average_ratings = (average_ratings - np.mean(average_ratings)) / (np.std(average_ratings) + 1e-10)
+    view_counts = (view_counts - np.mean(view_counts)) / (np.std(view_counts) + 1e-10)
+    print(np.mean(average_ratings), np.std(average_ratings), np.max(average_ratings), np.min(average_ratings))
+    print(np.mean(view_counts), np.std(view_counts), np.max(view_counts), np.min(view_counts))
+
+
+
 
 with h5py.File(f"../dataset/video_embeddings{VERSION}.hdf5", "r") as hf:
     embeddings = hf["embeddings"][:]
@@ -87,20 +116,20 @@ hf.create_dataset('video_ids', data=videoIds)
 hf.close()
 print(isinstance(augmented_embeddings[0][0], np.float32))
 
-with open(f"../dataset/video_video_edge{VERSION}_w.json", "r") as json_file:
-    video_video_edge = json.load(json_file)
+# with open(f"../dataset/video_video_edge{VERSION}_w.json", "r") as json_file:
+#     video_video_edge = json.load(json_file)
 
-video_adj_list = dict(zip([i for i in range(len(video_ids.keys()))], [{} for _ in range(len(video_ids.keys()))]))
-for video_id in tqdm(video_video_edge.keys()):
-    for recvideo_id in video_video_edge[video_id].keys():
-        video_adj_list[video_ids[video_id]][video_ids[recvideo_id]] = video_video_edge[video_id][recvideo_id]
-    channel_id = video2channel[video_id]
-    if channel_id != "":
-        for same_ch_video in channel2video[channel_id].keys():
-            video_adj_list[video_ids[video_id]][video_ids[same_ch_video]] = 1 
-print(len(channel2video.keys()))
-with open(f"../dataset/video_adj_list{VERSION}_w_aug.json", "w") as json_file:
-    json.dump(video_adj_list, json_file)
+# video_adj_list = dict(zip([i for i in range(len(video_ids.keys()))], [{} for _ in range(len(video_ids.keys()))]))
+# for video_id in tqdm(video_video_edge.keys()):
+#     for recvideo_id in video_video_edge[video_id].keys():
+#         video_adj_list[video_ids[video_id]][video_ids[recvideo_id]] = video_video_edge[video_id][recvideo_id]
+#     channel_id = video2channel[video_id]
+#     if channel_id != "":
+#         for same_ch_video in channel2video[channel_id].keys():
+#             video_adj_list[video_ids[video_id]][video_ids[same_ch_video]] = 1 
+# print(len(channel2video.keys()))
+# with open(f"../dataset/video_adj_list{VERSION}_w_aug.json", "w") as json_file:
+#     json.dump(video_adj_list, json_file)
 
 with open(f"../dataset/video2channel{VERSION}.json", "w") as json_file:
     json.dump(video2channel, json_file)

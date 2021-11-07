@@ -6,14 +6,14 @@ import ray
 import logging
 import argparse
 
-VERSION = "reddit"
+VERSION = "rand_new"
 parser = argparse.ArgumentParser(description='get metadata.')
 parser.add_argument('--log', type=str, dest="log_path", help='log path', default=f"./logs/log_metadata_{VERSION}.txt")
 parser.add_argument('--data', type=str, dest="sock_puppet_path", help='sock puppet path', default=f"../dataset/sock_puppets_{VERSION}.json")
 parser.add_argument('--video', type=str, dest="video_id_path", help='video id path', default=f"../dataset/video_stat_{VERSION}.json")
 parser.add_argument('--metadata', type=str, dest="video_metadata_path", help='video metadata path', default=f"../dataset/video_metadata_{VERSION}.json")
-
 args = parser.parse_args()
+
 
 logging.basicConfig(
     filename=args.log_path,
@@ -22,8 +22,9 @@ logging.basicConfig(
     datefmt='%H:%M:%S',
     level=logging.INFO
 )
-logger=logging.getLogger() 
+logger = logging.getLogger() 
 logger.setLevel(logging.INFO) 
+
 
 def get_automatic_captions(js: dict):
     captions = js.get('automatic_captions', {})
@@ -37,6 +38,7 @@ def get_subtitles(js: dict):
     if 'en' not in subtitles:
         return None
     return subtitles['en'][0]['url']
+
 
 @ray.remote
 def get_metadata(video_id_list: list):
@@ -98,13 +100,13 @@ def get_all_metadata(
                         video_ids[video_id] = 0
                     video_ids[video_id] += 1
 
-            # Recommended videos
-            rec_trails = data[i]["recommendation_trail"]
-            for trail in rec_trails:
-                for video_id in trail:
-                    if video_id not in video_ids.keys():
-                        video_ids[video_id] = 0
-                    video_ids[video_id] += 1 
+            # # Recommended videos
+            # rec_trails = data[i]["recommendation_trail"]
+            # for trail in rec_trails:
+            #     for video_id in trail:
+            #         if video_id not in video_ids.keys():
+            #             video_ids[video_id] = 0
+            #         video_ids[video_id] += 1 
         except:
             false_cnt += 1
             continue

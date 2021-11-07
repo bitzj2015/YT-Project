@@ -74,7 +74,7 @@ def run_docker(user_video_seqs, dump_root="/home/user/Desktop/crawls", real_root
 
 if __name__ == "__main__":
     random.seed(0)
-    task = "reddit_crawl"
+    task = "rl_eval"
     batch = []
     if task == "reddit_crawl":
         with open("../dataset/sample_reddit_traces.json", "r") as json_file:
@@ -97,32 +97,80 @@ if __name__ == "__main__":
                 batch.append(video_seqs)
                 video_seqs = {}
 
+        logging.basicConfig(
+            filename=f"./logs/log.txt",
+            filemode='w',
+            format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+            datefmt='%H:%M:%S',
+            level=logging.INFO
+        )
+        logger=logging.getLogger() 
+        logger.setLevel(logging.INFO)
+
+        for i in tqdm(range(len(batch))):
+            ray.init()
+            run_docker(batch[i], logger=logger, real_root="$PWD/docker-volume/crawls_reddit", timeout=38)
+            ray.shutdown()
+
     elif task == "rl_eval":
-        with open("../obfuscation/results/test_user_trace_0.2_all_new.json", "r") as json_file:
+        with open("../obfuscation/results/test_user_trace_0.2_reddit_new2_0_new.json", "r") as json_file:
             rl_user_data = json.load(json_file)
     
         video_seqs = {}
         batch = []
-        # for i in range(150):
-        #     video_seqs[f"base_{i}"] = rl_user_data["base"][str(i)]
-        # batch.append(video_seqs)
+        for _ in range(2):
+            for i in range(150):
+                video_seqs[f"base_{i}"] = rl_user_data["base"][str(i)]
+            batch.append(video_seqs)
 
         video_seqs = {}
-        for i in range(150):
-            video_seqs[f"obfu_{i}"] = rl_user_data["obfu"][str(i)]
-        batch.append(video_seqs)
+        for _ in range(2):
+            for i in range(150):
+                video_seqs[f"obfu_{i}"] = rl_user_data["obfu"][str(i)]
+            batch.append(video_seqs)
     
-    logging.basicConfig(
-        filename=f"./logs/log.txt",
-        filemode='w',
-        format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-        datefmt='%H:%M:%S',
-        level=logging.INFO
-    )
-    logger=logging.getLogger() 
-    logger.setLevel(logging.INFO)
+        logging.basicConfig(
+            filename=f"./logs/log.txt",
+            filemode='w',
+            format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+            datefmt='%H:%M:%S',
+            level=logging.INFO
+        )
+        logger=logging.getLogger() 
+        logger.setLevel(logging.INFO)
 
-    for i in tqdm(range(len(batch))):
-        ray.init()
-        run_docker(batch[i], logger=logger)
-        ray.shutdown()
+        for i in tqdm(range(len(batch))):
+            ray.init()
+            run_docker(batch[i], logger=logger, real_root="$PWD/docker-volume/crawls_rl_reddit_new2", timeout=45)
+            ray.shutdown()
+
+        with open("../obfuscation/results/test_user_trace_0.2_reddit_new2_1_new.json", "r") as json_file:
+            rl_user_data = json.load(json_file)
+    
+        video_seqs = {}
+        batch = []
+        for _ in range(2):
+            for i in range(150):
+                video_seqs[f"base_{i}"] = rl_user_data["base"][str(i)]
+            batch.append(video_seqs)
+
+        video_seqs = {}
+        for _ in range(2):
+            for i in range(150):
+                video_seqs[f"obfu_{i}"] = rl_user_data["obfu"][str(i)]
+            batch.append(video_seqs)
+    
+        logging.basicConfig(
+            filename=f"./logs/log.txt",
+            filemode='w',
+            format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+            datefmt='%H:%M:%S',
+            level=logging.INFO
+        )
+        logger=logging.getLogger() 
+        logger.setLevel(logging.INFO)
+
+        for i in tqdm(range(len(batch))):
+            ray.init()
+            run_docker(batch[i], logger=logger, real_root="$PWD/docker-volume/crawls_rand_reddit_new2", timeout=45)
+            ray.shutdown()
