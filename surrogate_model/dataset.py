@@ -12,6 +12,7 @@ class YTDataset(Dataset):
         last_label=None,
         last_label_p=None,
         last_label_type=None,
+        last_cate=None,
         transform=None
     ):
         self.input = input_data
@@ -21,6 +22,7 @@ class YTDataset(Dataset):
         self.last_label = last_label
         self.last_label_p = np.array(last_label_p).astype("float32")
         self.last_label_type = last_label_type
+        self.last_cate = last_cate
         self.transform = transform
 
     def __len__(self):
@@ -39,11 +41,13 @@ class YTDataset(Dataset):
         last_label_data = self.last_label[idx]
         last_label_p_data = self.last_label_p[idx]
         last_label_type_data = self.last_label_type[idx]
+        last_cate_data = self.last_cate[idx]
         
         sample = {
             "input":input_data, "label":label_data, 
             "label_type": label_type_data, "mask": mask_data, 
-            "last_label": last_label_data, "last_label_type": last_label_type_data, "last_label_p": last_label_p_data
+            "last_label": last_label_data, "last_label_type": last_label_type_data, "last_label_p": last_label_p_data,
+            "last_cate": last_cate_data
         }
         if self.transform:
             sample = self.transform(sample)
@@ -55,10 +59,12 @@ class ToTensor(object):
         last_label = sample["last_label"]
         last_label_type = sample["last_label_type"]
         last_label_p = sample["last_label_p"]
+        last_cate = sample["last_cate"]
         return {
             "input":torch.from_numpy(input), "label":torch.from_numpy(label), 
             "label_type": torch.from_numpy(label_type), "mask": torch.from_numpy(mask),
-            "last_label": torch.from_numpy(last_label), "last_label_p": torch.from_numpy(last_label_p), "last_label_type": torch.from_numpy(last_label_type)
+            "last_label": torch.from_numpy(last_label), "last_label_p": torch.from_numpy(last_label_p), "last_label_type": torch.from_numpy(last_label_type),
+            "last_cate": torch.from_numpy(last_cate)
         }
         
         

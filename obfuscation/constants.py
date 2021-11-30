@@ -1,6 +1,10 @@
 import json
+import numpy as np
 
-with open("../dataset/video_ids_reddit.json", "r") as json_file:
+
+VERSION = "reddit"
+TAG = "_filter"
+with open(f"../dataset/video_ids_{VERSION}.json", "r") as json_file:
     VIDEO_IDS = json.load(json_file)
     
 ID2VIDEO = {}
@@ -10,3 +14,6 @@ print(len(ID2VIDEO.keys()))
 
 with open(f"./results/bias_weight_new.json", "r") as json_file:
     BIAS_WEIGHT = json.load(json_file)
+
+def kl_divergence(p, q):
+	return sum(p[i] * np.log2(p[i]/q[i]) for i in range(len(p)))

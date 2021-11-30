@@ -31,7 +31,7 @@ class PolicyNetRegression(torch.nn.Module):
         self.relu = nn.ReLU().to(self.device)
         self.train()
 
-    def get_rec(self, inputs, with_graph=False):
+    def get_rec(self, inputs, with_graph=False, topk=100):
         batch_size, seq_len = inputs.shape
         inputs = self.graph_embeddings(inputs.reshape(-1).tolist(), with_graph).reshape(batch_size, seq_len, self.emb_dim)
         out, _ = self.lstm(inputs)
@@ -40,11 +40,12 @@ class PolicyNetRegression(torch.nn.Module):
             outputs.append(out[i][-1])
         outputs = torch.stack(outputs, dim=0).squeeze()
         outputs = self.tanh(self.linear(outputs)).reshape(batch_size, self.num_user_state, -1)
+        emb = outputs.detach()
         outputs = torch.matmul(outputs, self.video_embeddings.t()) 
         outputs, _ = outputs.max(1)
-        _, rec_outputs = torch.topk(F.softmax(outputs, -1), k=100, dim=-1)
+        _, rec_outputs = torch.topk(F.softmax(outputs, -1), k=topk, dim=-1)
          
-        return rec_outputs.tolist()
+        return rec_outputs.tolist(), emb.cpu().numpy()
 
 
     def forward(self, inputs, label, label_p, label_type, mask, with_graph=False):

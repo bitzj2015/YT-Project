@@ -2,7 +2,7 @@
 class EnvConfig(object):
     def __init__(
         self,
-        num_browsers=64,
+        num_browsers=50,
         alpha=0.2,
         his_len=10,
         emb_dim=384 + 19,
@@ -19,7 +19,8 @@ class EnvConfig(object):
         action_dim=100,
         device="cpu",
         agent_path="./param/agent.pkl", 
-        logger=None
+        logger=None, 
+        version="test"
     ):
         self.num_browsers = num_browsers
         self.alpha = alpha
@@ -39,3 +40,4 @@ class EnvConfig(object):
         self.device = device
         self.agent_path = agent_path
         self.logger = logger
+        self.version = version

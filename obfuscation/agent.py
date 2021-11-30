@@ -119,8 +119,8 @@ class Agent(object):
                     0.01 * self.entropies[i]
         self.optimizer.zero_grad()
 
-        loss = policy_loss.sum() + 0.5 * value_loss.sum(0)
-        print("loss: {}, {}".format(policy_loss.sum().item(), value_loss.sum(0).item()))
+        loss = policy_loss.sum() + 50 * value_loss.sum(0)
+        print("loss: {}, {}; reward: {}".format(policy_loss.sum().item(), value_loss.sum(0).item(), self.rewards))
         loss.backward(retain_graph=True)
         torch.nn.utils.clip_grad_norm(self.model.parameters(), 100)
         self.optimizer.step()

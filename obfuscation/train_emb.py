@@ -2,7 +2,7 @@ import sys
 sys.path.append('../surrogate_model')
 import torch
 import torch.optim as optim
-from env import *
+from env_emb import *
 from agent import *
 from config import *
 from constants import *

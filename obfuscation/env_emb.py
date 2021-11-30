@@ -11,8 +11,8 @@ import logging
 class RolloutWorker(object):
     def __init__(self, env_args, user_videos, user_id):
         self.env_args = env_args
-        self.pre_rewards = {"removed": 0, "added": 0}
-        self.cur_rewards = {"removed": 0, "added": 0}
+        self.pre_rewards = 0
+        self.cur_rewards = 0
         self.watch_history = []
         self.watch_history_base = []
         self.watch_history_type = []
@@ -41,23 +41,11 @@ class RolloutWorker(object):
         self.user_step += initial_len
         self.step += initial_len
 
-    def update_reward(self, cur_rec_base, cur_rec):
-        self.cur_rec_base = dict(zip(cur_rec_base, [0 for _ in range(len(cur_rec_base))]))
-        self.cur_rec = dict(zip(cur_rec, [0 for _ in range(len(cur_rec))]))
-        # self.global_rec_base.update(self.cur_rec_base)
-        # self.global_rec.update(self.cur_rec)
-        self.global_rec_base = self.cur_rec_base
-        self.global_rec = self.cur_rec
+    def update_reward(self, cur_reward):
         self.pre_rewards = self.cur_rewards
-        self.cur_rewards = {"removed": 0, "added": 0}
-        for video in self.global_rec_base.keys():
-            if video not in self.global_rec.keys():
-                self.cur_rewards["removed"] += 1
-        for video in self.global_rec.keys():
-            if video not in self.global_rec_base.keys():
-                self.cur_rewards["added"] += 1
+        self.cur_rewards = cur_reward
         if self.user_id == 0:
-            self.logger.info("cur_reward: {}, {}, {}".format(str(self.cur_rewards), str(list(self.global_rec.keys())[0:10]), str(list(self.global_rec_base.keys())[0:10])))
+            self.logger.info("cur_reward: {}".format(str(self.cur_rewards)))
     
     def rollout(self, obfuscation_video=-1):
         if self.user_step >= len(self.user_videos):
@@ -84,14 +72,14 @@ class RolloutWorker(object):
         return (self.watch_history_base, self.watch_history)
 
     def get_reward(self):
-        return (self.cur_rewards["removed"] + self.cur_rewards["added"]) / 1000
+        return self.cur_rewards
     
     def get_reward_gain(self):
-        return (self.cur_rewards["removed"] + self.cur_rewards["added"] - self.pre_rewards["removed"] - self.pre_rewards["added"]) / 1000
+        return self.cur_rewards - self.pre_rewards
     
     def clear_worker(self):
-        self.pre_rewards = {"removed": 0, "added": 0}
-        self.cur_rewards = {"removed": 0, "added": 0}
+        self.pre_rewards = 0
+        self.cur_rewards = 0
         self.watch_history = []
         self.watch_history_base = []
         self.watch_history_type = []
@@ -155,10 +143,11 @@ class Env(object):
     def send_reward_to_workers(self):
         self.state = self.get_state_from_workers()
         self.base_state = self.get_base_state_from_workers()
-        cur_rec, cur_emb = self.yt_model.get_rec(torch.from_numpy(self.state).to(self.env_args.device), topk=1000)
-        cur_rec_base, cur_emb_base = self.yt_model.get_rec(torch.from_numpy(self.base_state).to(self.env_args.device), topk=1000)
-        self.env_args.logger.info("Distance between embeddings: {}, {}".format(np.sum(cur_emb * cur_emb_base) / self.env_args.num_user_state / self.env_args.num_browsers, cur_emb.shape))
-        ray.get([self.workers[i].update_reward.remote(cur_rec_base[i], cur_rec[i]) for i in range(len(self.workers))])
+        _, cur_cate = self.yt_model.get_rec(torch.from_numpy(self.state).to(self.env_args.device), topk=100)
+        _, cur_cate_base = self.yt_model.get_rec(torch.from_numpy(self.base_state).to(self.env_args.device), topk=100)
+        cur_reward = np.mean(np.sum(cur_cate * cur_cate_base, axis=-1)/(np.linalg.norm(cur_cate_base, axis=-1)*np.linalg.norm(cur_cate, axis=-1)), axis=-1)
+        self.env_args.logger.info("KL distance between embeddings: {}, {}, {}".format(np.mean(cur_reward), cur_reward.shape, cur_cate.shape))
+        ray.get([self.workers[i].update_reward.remote(1 - cur_reward[i]) for i in range(len(self.workers))])
 
     def get_next_obfuscation_videos(self, terminate=False):
         self.state = self.get_state_from_workers()

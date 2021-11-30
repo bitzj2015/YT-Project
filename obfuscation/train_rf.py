@@ -2,7 +2,7 @@ import sys
 sys.path.append('../surrogate_model')
 import torch
 import torch.optim as optim
-from env import *
+from env_rf import *
 from agent import *
 from config import *
 from constants import *
@@ -89,6 +89,7 @@ if not args.eval:
     test_losses = []
     test_rewards = []
     # Start  training
+    best_reward = -100
     for ep in range(50):
         env.rl_agent.train()
         for i in range(train_inputs.shape[0] // env_args.num_browsers):
@@ -103,7 +104,11 @@ if not args.eval:
             
             if i % 10 == 0:
                 env_args.logger.info(f"Train epoch: {ep}, episode: {i}, loss: {loss}, reward: {reward}")
-            env.stop_env()
+            if best_reward < np.mean(rewards[-112:]):
+                env.stop_env()
+                best_reward = np.mean(rewards[-112:])
+            else:
+                env.stop_env(save_param=False)
             # except:
             #     continue
         with open(f"./results/train_log_{args.alpha}_{args.version}.json", "w") as json_file:

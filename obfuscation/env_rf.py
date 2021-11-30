@@ -2,15 +2,17 @@ import numpy as np
 import ray
 import torch
 import random
-
+import json
+from constants import *
+import logging
 
 # Define ray worker, each of which simulates one user.
 @ray.remote
 class RolloutWorker(object):
     def __init__(self, env_args, user_videos, user_id):
         self.env_args = env_args
-        self.pre_rewards = {"removed": 0, "added": 0}
-        self.cur_rewards = {"removed": 0, "added": 0}
+        self.pre_rewards = 0
+        self.cur_rewards = 0
         self.watch_history = []
         self.watch_history_base = []
         self.watch_history_type = []
@@ -22,6 +24,15 @@ class RolloutWorker(object):
         self.step = 0
         self.user_videos = user_videos
         self.user_id = user_id
+        logging.basicConfig(
+            filename=f"./logs/log_train_regression_{self.env_args.alpha}_{self.env_args.version}.txt",
+            filemode='a',
+            format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+            datefmt='%H:%M:%S',
+            level=logging.INFO
+        )
+        self.logger=logging.getLogger() 
+        self.logger.setLevel(logging.INFO) 
 
     def initial_profile(self, initial_len=5):
         self.watch_history_base = self.user_videos[: initial_len]
@@ -30,27 +41,15 @@ class RolloutWorker(object):
         self.user_step += initial_len
         self.step += initial_len
 
-    def update_reward(self, cur_rec_base, cur_rec):
-        self.cur_rec_base = dict(zip(cur_rec_base, [0 for _ in range(len(cur_rec_base))]))
-        self.cur_rec = dict(zip(cur_rec, [0 for _ in range(len(cur_rec))]))
-        # self.global_rec_base.update(self.cur_rec_base)
-        # self.global_rec.update(self.cur_rec)
-        self.global_rec_base = self.cur_rec_base
-        self.global_rec = self.cur_rec
+    def update_reward(self, cur_reward):
         self.pre_rewards = self.cur_rewards
-        self.cur_rewards = {"removed": 0, "added": 0}
-        for video in self.global_rec_base.keys():
-            if video not in self.global_rec.keys():
-                self.cur_rewards["removed"] += 1
-        for video in self.global_rec.keys():
-            if video not in self.global_rec_base.keys():
-                self.cur_rewards["added"] += 1
+        self.cur_rewards = cur_reward
         if self.user_id == 0:
-            print("cur_reward: ", self.cur_rewards, list(self.global_rec.keys())[0:10], list(self.global_rec_base.keys())[0:10])
+            self.logger.info("cur_reward: {}".format(str(self.cur_rewards)))
     
     def rollout(self, obfuscation_video=-1):
         if self.user_step >= len(self.user_videos):
-            return
+            return False
         if obfuscation_video == -1:
             video = self.user_videos[self.user_step]
             self.watch_history_base.append(video)
@@ -61,22 +60,26 @@ class RolloutWorker(object):
             self.watch_history_type.append(1)
         self.watch_history.append(video)
         self.step += 1
+        return True
 
     def get_state(self, his_len=10):
         return np.array(self.watch_history[:])
     
     def get_base_state(self, his_len=10):
         return np.array(self.watch_history_base[:])
+        
+    def get_watch_history(self):
+        return (self.watch_history_base, self.watch_history)
 
     def get_reward(self):
-        return (self.cur_rewards["removed"] + self.cur_rewards["added"]) / 100
+        return self.cur_rewards
     
     def get_reward_gain(self):
-        return (self.cur_rewards["removed"] + self.cur_rewards["added"] - self.pre_rewards["removed"] - self.pre_rewards["added"]) / 100
-
+        return self.cur_rewards - self.pre_rewards
+    
     def clear_worker(self):
-        self.pre_rewards = {"removed": 0, "added": 0}
-        self.cur_rewards = {"removed": 0, "added": 0}
+        self.pre_rewards = 0
+        self.cur_rewards = 0
         self.watch_history = []
         self.watch_history_base = []
         self.watch_history_type = []
@@ -86,11 +89,13 @@ class RolloutWorker(object):
         self.global_rec = {}
         self.user_step = 0
         self.step = 0
+        if self.user_id == 0:
+            self.logger.info("clear worker")
 
 
 # Define the environment for training RL agent
 class Env(object):
-    def __init__(self, env_args, yt_model, rl_agent, workers, seed=0):
+    def __init__(self, env_args, yt_model, rl_agent, workers, seed=0, id2video_map=None, use_rand=0):
         self.env_args = env_args
         self.all_rewards = []
         self.all_reward_gains = []
@@ -100,6 +105,13 @@ class Env(object):
         self.rl_agent = rl_agent
         self.workers = workers
         self.seed = seed
+        self.id2video_map = id2video_map
+        self.use_rand = use_rand
+        self.bias_weight = []
+        self.video_set = [i for i in range(self.env_args.action_dim)]
+        if self.use_rand == 2:
+            self.bias_weight = [1 / self.env_args.action_dim for _ in range(self.env_args.action_dim)]
+            self.prev_bias_weight = [i / sum(BIAS_WEIGHT) for i in BIAS_WEIGHT]
 
     def start_env(self):
         # random.seed(self.seed)
@@ -108,6 +120,16 @@ class Env(object):
     def stop_env(self, save_param=True):
         self.clear_env(save_param=save_param)
         ray.get([worker.clear_worker.remote() for worker in self.workers])
+    
+    def get_watch_history_from_workers(self):
+        rets = []
+        all_watch_history = ray.get([worker.get_watch_history.remote() for worker in self.workers])
+        for (watch_history_base, watch_history) in all_watch_history:
+            ret = {}
+            ret["base"] = [self.id2video_map[str(index)] for index in watch_history_base]
+            ret["obfu"] = [self.id2video_map[str(index)] for index in watch_history]
+            rets.append(ret) 
+        return rets
         
     def get_reward_from_workers(self):
         self.all_rewards = ray.get([worker.get_reward.remote() for worker in self.workers])
@@ -121,14 +143,26 @@ class Env(object):
     def send_reward_to_workers(self):
         self.state = self.get_state_from_workers()
         self.base_state = self.get_base_state_from_workers()
-        cur_rec = self.yt_model.get_rec(torch.from_numpy(self.state).to(self.env_args.device))
-        cur_rec_base = self.yt_model.get_rec(torch.from_numpy(self.base_state).to(self.env_args.device))
-        ray.get([self.workers[i].update_reward.remote(cur_rec_base[i], cur_rec[i]) for i in range(len(self.workers))])
+        cur_cate = self.yt_model.get_rec(torch.from_numpy(self.state).to(self.env_args.device), topk=100)
+        cur_cate_base = self.yt_model.get_rec(torch.from_numpy(self.base_state).to(self.env_args.device), topk=100)
+        # self.env_args.logger.info("obfu: {}".format(cur_cate[-1]))
+        # self.env_args.logger.info("base: {}".format(cur_cate_base[-1]))
+        # self.env_args.logger.info("obfu: {}".format(cur_cate[-2]))
+        # self.env_args.logger.info("base: {}".format(cur_cate_base[-2]))
+        cur_reward = [kl_divergence(cur_cate_base[i], cur_cate[i]) for i in range(len(self.workers))]
+        self.env_args.logger.info("KL distance between embeddings: {}, {}, {}".format(np.mean(cur_reward), len(cur_reward), cur_cate.shape))
+        ray.get([self.workers[i].update_reward.remote(cur_reward[i]) for i in range(len(self.workers))])
 
     def get_next_obfuscation_videos(self, terminate=False):
         self.state = self.get_state_from_workers()
-        return self.rl_agent.take_action(torch.from_numpy(self.state).to(self.env_args.device), terminate=terminate)
-
+        if self.use_rand == 0:
+            return self.rl_agent.take_action(torch.from_numpy(self.state).to(self.env_args.device), terminate=terminate)
+        elif self.use_rand == 1:
+            return np.random.choice(self.video_set, len(self.workers))
+        elif self.use_rand == 2:
+            # normalized_bias_weight = [item / sum(self.bias_weight) for item in self.bias_weight]
+            return np.random.choice(self.video_set, len(self.workers), p=self.prev_bias_weight)
+            
     def get_state_from_workers(self):
         self.state = np.stack(ray.get([worker.get_state.remote(self.env_args.his_len) for worker in self.workers]))
         return self.state
@@ -138,18 +172,27 @@ class Env(object):
         return self.base_state
 
     def rollout(self, train_rl=True):
-        print("start rolling out")
+        self.env_args.logger.info("start rolling out")
         for _ in range(self.env_args.rollout_len):
             flag = random.random()
             if flag < self.env_args.alpha:
                 obfuscation_videos = self.get_next_obfuscation_videos()
-                ray.get([self.workers[i].rollout.remote(obfuscation_videos[i]) for i in range(len(self.workers))])
+                ret = ray.get([self.workers[i].rollout.remote(obfuscation_videos[i]) for i in range(len(self.workers))])
+                if not ret:
+                    break
                 self.send_reward_to_workers()
                 self.update_rl_agent(reward_only=True)
+                if self.use_rand == 2:
+                    rewards = self.get_reward_gain_from_workers()
+                    for i in range(len(obfuscation_videos)):
+                        self.bias_weight[obfuscation_videos[i]] += max(0, rewards[i])
             else:
-                ray.get([self.workers[i].rollout.remote(-1) for i in range(len(self.workers))])
+                ret = ray.get([self.workers[i].rollout.remote(-1) for i in range(len(self.workers))])
+                if not ret:
+                    break
         self.get_next_obfuscation_videos(terminate=True)
-        if train_rl:
+        self.env_args.logger.info("end rolling out")
+        if train_rl and self.use_rand == 0:
             loss = self.update_rl_agent(reward_only=False)
         else:
             loss = 0
@@ -170,5 +213,10 @@ class Env(object):
         self.all_reward_gains = []
         self.all_watch_history_base = []
         self.all_watch_history = []
+        self.env_args.logger.info("clear env")
         if save_param:
             self.rl_agent.save_param()
+            self.env_args.logger.info("save rl agent")
+        # if self.use_rand == 2:
+        #     with open(f"./results/bias_weight_new.json", "w") as json_file:
+        #         json.dump(self.bias_weight, json_file)

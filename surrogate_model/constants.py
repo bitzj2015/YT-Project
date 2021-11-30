@@ -1,6 +1,8 @@
 import json
+import numpy as np
+
 VERSION = "reddit"
-TAG = "_filter_p"
+TAG = "_filter"
 with open(f"../dataset/home_video_id_sorted_{VERSION}{TAG}.json", "r") as json_file:
     data = json.load(json_file)
 home_video_id_sorted = [int(key) for key in data.keys()]
@@ -19,3 +21,6 @@ for video_id in video2channel_ids.keys():
     
 with open(f"../dataset/video_adj_list_{VERSION}_w.json", "r") as json_file:
     video_graph_adj_mat = json.load(json_file)
+
+def kl_divergence(p, q):
+	return sum(p[i] * np.log2(p[i]/q[i]) for i in range(len(p)))
