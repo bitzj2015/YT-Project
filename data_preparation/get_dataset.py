@@ -15,8 +15,8 @@ logging.basicConfig(
 logger=logging.getLogger() 
 logger.setLevel(logging.INFO) 
 
-VERSION = "_reddit"
-FILTER = "_filter_p_large"
+VERSION = "_rl_new"
+FILTER = "_filter"
 with open(f"../dataset/sock_puppets{VERSION}.json", "r") as json_file:
     data = json.load(json_file)[2]["data"]
 
@@ -55,98 +55,121 @@ last_label_type_all = []
 max_label_len = 1000
 max_trail_len = 40
 topk_home = 100
+last_gain = 1
 initial_home_video_ids = {}
+unique_home_video_id = {}
 for i in tqdm(range(len(data))):
-    try:
-        initial_home_video_ids.update(dict(zip(data[i]["initial_homepage"], [1 for _ in range(len(data[i]["initial_homepage"]))])))
-    except: 
-        continue
+    initial_home_video_ids.update(dict(zip(data[i]["initial_homepage"], [1 for _ in range(len(data[i]["initial_homepage"]))])))
+    video_views = data[i]["homepage"]
+    tmp = {}
+    for video_view in video_views:
+        for video_id in video_view:
+            if video_id in initial_home_video_ids.keys():
+                continue
+            if video_id not in unique_home_video_id.keys():
+                unique_home_video_id[video_id] = 0
+            if video_id not in tmp.keys():
+                tmp[video_id] = 1
+                unique_home_video_id[video_id] += 1
+            else:
+                tmp[video_id] = 1
 print(len(initial_home_video_ids))
 
+removed_videos = []
+for video in unique_home_video_id.keys():
+    if unique_home_video_id[video] > 10 and unique_home_video_id[video] < 1000:
+        removed_videos.append(video)
+for video in removed_videos:
+    del unique_home_video_id[video]
+
+print(len(unique_home_video_id))
+
 for i in tqdm(range(len(data))):
-    try:
-        input_data = []
-        mask_data = []
+    # try:
+    input_data = []
+    mask_data = []
 
-        # Get video trails
-        video_views = data[i]["viewed"]
-        for video_id in video_views:
-            # if video_id in video_ids.keys():
-            input_data.append(video_ids[video_id])
-            mask_data.append(1)
+    # Get video trails
+    video_views = data[i]["viewed"]
+    for video_id in video_views:
+        # if video_id in video_ids.keys():
+        input_data.append(video_ids[video_id])
+        mask_data.append(1)
 
-        # Append -1 if the length of trail is smaller than max_trail_len
-        if len(input_data) < max_trail_len:
-            for _ in range(max_trail_len-len(input_data)):
-                input_data.append(-1)
-                mask_data.append(0)
+    # Append -1 if the length of trail is smaller than max_trail_len
+    if len(input_data) < max_trail_len:
+        for _ in range(max_trail_len-len(input_data)):
+            input_data.append(-1)
+            mask_data.append(0)
 
-        # Get recommended video trails
-        rec_trails = data[i]["recommendation_trail"]
-        label_data = []
-        label_type_data = []
-        for j in range(len(rec_trails)):
-            label = []
-            label_type = []
-            trail = rec_trails[j]
+    # Get recommended video trails
+    rec_trails = data[i]["recommendation_trail"]
+    label_data = []
+    label_type_data = []
+    for j in range(len(rec_trails)):
+        label = []
+        label_type = []
+        trail = rec_trails[j]
 
-            # Get all the recommended videos each step
-            for video_id in trail:
-                label.append(video_ids[video_id])
-                label_type.append(1)
-            
-            # Label_type: 0 -> true label, 1 -> false label
-            label_type += [0 for _ in range(max_label_len-len(label_type))]
-
-            # Generate false labels
-            label = sample_false_label(label, len(video_ids.keys()), max_label_len)
-            label_data.append(np.array(label))
-            label_type_data.append(np.array(label_type))
-
-        # Get homepage recommendation
-        home_recs = data[i]["homepage"]
-
-        # In the last step, we want to predict the homepage videos
-        last_label = []
-        last_label_type = []
-        home_video_ids = {}
-        for home_rec in home_recs:
-            for video_id in home_rec:
-                if video_id in initial_home_video_ids.keys():
-                    continue
-                if video_id not in home_video_ids.keys():
-                    home_video_ids[video_id] = 0
-                home_video_ids[video_id] += 1
-
-        home_video_ids = {k : v for k, v in sorted(home_video_ids.items(), key=lambda item: item[1], reverse=True)}
-        last_label = [video_ids[video_id] for video_id in list(home_video_ids.keys())[0:topk_home]]
-        last_label_p = [value for value in list(home_video_ids.values())[0:topk_home]]
-        last_label_type = [1 for _ in range(len(last_label))]
-
+        # # Get all the recommended videos each step
+        # for video_id in trail:
+        #     label.append(video_ids[video_id])
+        #     label_type.append(1)
+        
         # Label_type: 0 -> true label, 1 -> false label
-        last_label_type += [0 for _ in range(max_label_len * 10 - len(last_label_type))]
+        label_type += [0 for _ in range(max_label_len-len(label_type))]
 
         # Generate false labels
-        last_label = sample_false_label(last_label, len(video_ids.keys()), max_label_len * 10)
-        last_label_p = [value/ sum(last_label_p) for value in last_label_p]
-        last_label_p += [0 for _ in range(max_label_len * 10 - len(last_label_p))]
-        
-        # Append zero matrix if the length of label list is smaller than max_trail_len
-        if len(label_data) < max_trail_len:
-            for _ in range(max_trail_len-len(label_data)):
-                label_data.append(np.array(label)*0)
-                label_type_data.append(np.array(label_type)*0)
+        label = sample_false_label(label, len(video_ids.keys()), max_label_len)
+        label_data.append(np.array(label))
+        label_type_data.append(np.array(label_type))
 
-        input_data_all.append(np.array(input_data))
-        label_data_all.append(np.array(label_data))
-        label_type_data_all.append(np.array(label_type_data))
-        mask_data_all.append(np.array(mask_data))
-        last_label_all.append(np.array(last_label))
-        last_label_p_all.append(np.array(last_label_p))
-        last_label_type_all.append(np.array(last_label_type))
+    # Get homepage recommendation
+    home_recs = data[i]["homepage"]
 
-    except:
-        cnt += 1
+    # In the last step, we want to predict the homepage videos
+    last_label = []
+    last_label_type = []
+    home_video_ids = {}
+    for home_rec in home_recs:
+        for video_id in home_rec:
+            if video_id in initial_home_video_ids.keys():
+                continue
+            if video_id in unique_home_video_id.keys():
+                continue
+            if video_id not in home_video_ids.keys():
+                home_video_ids[video_id] = 0
+            home_video_ids[video_id] += 1
+
+    home_video_ids = {k : v for k, v in sorted(home_video_ids.items(), key=lambda item: item[1], reverse=True)}
+    last_label = [video_ids[video_id] for video_id in list(home_video_ids.keys())[0:topk_home]]
+    last_label_p = [value for value in list(home_video_ids.values())[0:topk_home]]
+    last_label_type = [1 for _ in range(len(last_label))]
+
+    # Label_type: 0 -> true label, 1 -> false label
+    last_label_type += [0 for _ in range(max_label_len * last_gain - len(last_label_type))]
+
+    # Generate false labels
+    last_label = sample_false_label(last_label, len(video_ids.keys()), max_label_len * last_gain)
+    last_label_p = [value/ sum(last_label_p) for value in last_label_p]
+    last_label_p += [0 for _ in range(max_label_len * last_gain - len(last_label_p))]
+    
+    # Append zero matrix if the length of label list is smaller than max_trail_len
+    if len(label_data) < max_trail_len:
+        for _ in range(max_trail_len-len(label_data)):
+            label_data.append(np.array(label)*0)
+            label_type_data.append(np.array(label_type)*0)
+
+    input_data_all.append(np.array(input_data))
+    label_data_all.append(np.array(label_data))
+    label_type_data_all.append(np.array(label_type_data))
+    mask_data_all.append(np.array(mask_data))
+    last_label_all.append(np.array(last_label))
+    last_label_p_all.append(np.array(last_label_p))
+    last_label_type_all.append(np.array(last_label_type))
+
+    # except:
+    #     cnt += 1
     
 logger.info("Missing {} trails.".format(cnt))
 # logger.info("Homepage No. recommended videos: {}".format(stat_len))
