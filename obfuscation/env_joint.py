@@ -95,13 +95,14 @@ class RolloutWorker(object):
 
 # Define the environment for training RL agent
 class Env(object):
-    def __init__(self, env_args, yt_model, rl_agent, workers, seed=0, id2video_map=None, use_rand=0):
+    def __init__(self, env_args, yt_model, denoiser, rl_agent, workers, seed=0, id2video_map=None, use_rand=0):
         self.env_args = env_args
         self.all_rewards = []
         self.all_reward_gains = []
         self.watch_history = []
         self.watch_history_base = []
         self.yt_model = yt_model
+        self.denoiser = denoiser
         self.rl_agent = rl_agent
         self.workers = workers
         self.seed = seed
@@ -143,11 +144,15 @@ class Env(object):
     def send_reward_to_workers(self):
         self.state = self.get_state_from_workers()
         self.base_state = self.get_base_state_from_workers()
-        _, cur_cate = self.yt_model.get_rec(torch.from_numpy(self.state).to(self.env_args.device), topk=100)
-        _, cur_cate_base = self.yt_model.get_rec(torch.from_numpy(self.base_state).to(self.env_args.device), topk=100)
-        cur_reward = np.mean(np.sum(cur_cate * cur_cate_base, axis=-1)/(np.linalg.norm(cur_cate_base, axis=-1)*np.linalg.norm(cur_cate, axis=-1)), axis=-1)
-        self.env_args.logger.info("KL distance between embeddings: {}, {}, {}".format(np.mean(cur_reward), cur_reward.shape, cur_cate.shape))
-        ray.get([self.workers[i].update_reward.remote(1 - cur_reward[i]) for i in range(len(self.workers))])
+        cur_cate = self.yt_model.get_rec(torch.from_numpy(self.state).to(self.env_args.device), topk=100)
+        cur_cate_base = self.yt_model.get_rec(torch.from_numpy(self.base_state).to(self.env_args.device), topk=100)
+        # self.env_args.logger.info("obfu: {}".format(cur_cate[-1]))
+        # self.env_args.logger.info("base: {}".format(cur_cate_base[-1]))
+        # self.env_args.logger.info("obfu: {}".format(cur_cate[-2]))
+        # self.env_args.logger.info("base: {}".format(cur_cate_base[-2]))
+        cur_reward = [kl_divergence(cur_cate_base[i], cur_cate[i]) for i in range(len(self.workers))]
+        self.env_args.logger.info("KL distance between embeddings: {}, {}, {}".format(np.mean(cur_reward), len(cur_reward), cur_cate.shape))
+        ray.get([self.workers[i].update_reward.remote(cur_reward[i]) for i in range(len(self.workers))])
 
     def get_next_obfuscation_videos(self, terminate=False):
         self.state = self.get_state_from_workers()

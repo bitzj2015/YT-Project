@@ -1,11 +1,13 @@
 import sys
 sys.path.append('../surrogate_model')
+sys.path.append('../denoiser')
 import torch
 import torch.optim as optim
-from env_emb import *
+from env_rf import *
 from agent import *
 from config import *
 from constants import *
+from denoiser import *
 import argparse
 import h5py
 import json
@@ -18,6 +20,7 @@ parser.add_argument('--video-id', dest="video_id_path", type=str, default=f"../d
 parser.add_argument('--train-data', dest="train_data_path", type=str, default=f"../dataset/train_data_{VERSION}{TAG}.hdf5")
 parser.add_argument('--test-data', dest="test_data_path", type=str, default=f"../dataset/test_data_{VERSION}{TAG}.hdf5")
 parser.add_argument('--agent-path', dest="agent_path", type=str, default="./param/agent.pkl")
+parser.add_argument('--denoiser-path', dest="denoiser_path", type=str, default="./param/denoiser.pkl")
 parser.add_argument('--alpha', dest="alpha", type=float, default=0.2)
 parser.add_argument('--use-rand', dest="use_rand", type=int, default=0)
 parser.add_argument('--version', dest="version", type=str, default="reddit")
@@ -64,6 +67,7 @@ rl_model = A2Clstm(env_args, video_embeddings).to(device)
 rl_optimizer = optim.Adam(rl_model.parameters(), lr=env_args.rl_lr)
 rl_agent = Agent(rl_model, rl_optimizer, env_args)
 
+denoiser = Denoiser(emb_dim=video_embeddings.shape[0], hidden_dim=256, video_embeddings=video_embeddings, device=device)
 # Start ray  
 ray.init()
 
@@ -89,6 +93,7 @@ if not args.eval:
     test_losses = []
     test_rewards = []
     # Start  training
+    best_reward = -100
     for ep in range(50):
         env.rl_agent.train()
         for i in range(train_inputs.shape[0] // env_args.num_browsers):
@@ -103,7 +108,11 @@ if not args.eval:
             
             if i % 10 == 0:
                 env_args.logger.info(f"Train epoch: {ep}, episode: {i}, loss: {loss}, reward: {reward}")
-            env.stop_env()
+            if best_reward < np.mean(rewards[-112:]):
+                env.stop_env()
+                best_reward = np.mean(rewards[-112:])
+            else:
+                env.stop_env(save_param=False)
             # except:
             #     continue
         with open(f"./results/train_log_{args.alpha}_{args.version}.json", "w") as json_file:
