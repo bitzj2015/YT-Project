@@ -20,7 +20,8 @@ puppet = [
 }
 ]
 
-VERSION = "rl_reddit_new2"
+# VERSION = "rl_reddit_new2"
+VERSION = "rand_final_new2_cate_test4"
 root_dir = f"./docker-volume/crawls_{VERSION}"
 for user_dir in sorted(tqdm(os.listdir(root_dir))):
     try:

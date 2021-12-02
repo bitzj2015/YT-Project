@@ -6,7 +6,8 @@ import ray
 import logging
 import argparse
 
-VERSION = "rand_new"
+# VERSION = "rl_reddit_new2"
+VERSION = "rl_final_new2_cate_test4"
 parser = argparse.ArgumentParser(description='get metadata.')
 parser.add_argument('--log', type=str, dest="log_path", help='log path', default=f"./logs/log_metadata_{VERSION}.txt")
 parser.add_argument('--data', type=str, dest="sock_puppet_path", help='sock puppet path', default=f"../dataset/sock_puppets_{VERSION}.json")

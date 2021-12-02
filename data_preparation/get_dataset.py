@@ -15,13 +15,19 @@ logging.basicConfig(
 logger=logging.getLogger() 
 logger.setLevel(logging.INFO) 
 
-VERSION = "_rl_new"
-FILTER = "_filter"
+VERSION = "_rl_final_new2_cate_test4"
+FILTER = ""
 with open(f"../dataset/sock_puppets{VERSION}.json", "r") as json_file:
     data = json.load(json_file)[2]["data"]
 
 with open(f"../dataset/video_ids{VERSION}.json", "r") as json_file:
     video_ids = json.load(json_file)
+
+with open(f"../dataset/category_ids_new.json", "r") as json_file:
+    cate_ids = json.load(json_file)
+
+with open(f"../dataset/video_metadata{VERSION}.json", "r") as json_file:
+    video_metadata = json.load(json_file)
 
 def sample_false_label(
     label: list, 
@@ -51,6 +57,7 @@ mask_data_all = []
 last_label_all = []
 last_label_p_all = []
 last_label_type_all = []
+last_cate_norm_all = []
 
 max_label_len = 1000
 max_trail_len = 40
@@ -77,12 +84,14 @@ print(len(initial_home_video_ids))
 
 removed_videos = []
 for video in unique_home_video_id.keys():
-    if unique_home_video_id[video] > 10 and unique_home_video_id[video] < 1000:
+    if unique_home_video_id[video] > 0 and unique_home_video_id[video] < 100:
         removed_videos.append(video)
 for video in removed_videos:
     del unique_home_video_id[video]
 
 print(len(unique_home_video_id))
+
+# unique_home_video_id = {}
 
 for i in tqdm(range(len(data))):
     # try:
@@ -97,6 +106,8 @@ for i in tqdm(range(len(data))):
         mask_data.append(1)
 
     # Append -1 if the length of trail is smaller than max_trail_len
+    if len(input_data) > 41:
+        print(len(input_data))
     if len(input_data) < max_trail_len:
         for _ in range(max_trail_len-len(input_data)):
             input_data.append(-1)
@@ -130,6 +141,7 @@ for i in tqdm(range(len(data))):
     # In the last step, we want to predict the homepage videos
     last_label = []
     last_label_type = []
+    last_cate = [0.01 for _ in range(len(cate_ids))]
     home_video_ids = {}
     for home_rec in home_recs:
         for video_id in home_rec:
@@ -143,15 +155,24 @@ for i in tqdm(range(len(data))):
 
     home_video_ids = {k : v for k, v in sorted(home_video_ids.items(), key=lambda item: item[1], reverse=True)}
     last_label = [video_ids[video_id] for video_id in list(home_video_ids.keys())[0:topk_home]]
+    # print(len(last_label))
     last_label_p = [value for value in list(home_video_ids.values())[0:topk_home]]
     last_label_type = [1 for _ in range(len(last_label))]
+
+    for video_id in list(home_video_ids.keys())[0:topk_home]:
+        try:
+            last_cate[cate_ids[video_metadata[video_id]["categories"]]] += 1
+        except:
+            continue
+    last_cate_norm = [last_cate[i] / sum(last_cate) for i in range(len(last_cate))]
+    # print(last_cate_norm)
 
     # Label_type: 0 -> true label, 1 -> false label
     last_label_type += [0 for _ in range(max_label_len * last_gain - len(last_label_type))]
 
     # Generate false labels
     last_label = sample_false_label(last_label, len(video_ids.keys()), max_label_len * last_gain)
-    last_label_p = [value/ sum(last_label_p) for value in last_label_p]
+    last_label_p = [value / sum(last_label_p) for value in last_label_p]
     last_label_p += [0 for _ in range(max_label_len * last_gain - len(last_label_p))]
     
     # Append zero matrix if the length of label list is smaller than max_trail_len
@@ -167,6 +188,7 @@ for i in tqdm(range(len(data))):
     last_label_all.append(np.array(last_label))
     last_label_p_all.append(np.array(last_label_p))
     last_label_type_all.append(np.array(last_label_type))
+    last_cate_norm_all.append(np.array(last_cate_norm))
 
     # except:
     #     cnt += 1
@@ -186,15 +208,17 @@ last_label_all = np.stack(last_label_all)
 last_label_p_all = np.stack(last_label_p_all)
 last_label_type_all = np.stack(last_label_type_all)
 mask_data_all = np.stack(mask_data_all)
+last_cate_norm_all = np.stack(last_cate_norm_all)
 
-logger.info("Input: {}, label: {}, label_type: {}, mask: {}, last_label: {}, last_label_p: {}, last_label_type: {}.".format(
+logger.info("Input: {}, label: {}, label_type: {}, mask: {}, last_label: {}, last_label_p: {}, last_label_type: {}, last_cate_norm: {}.".format(
     np.shape(input_data_all), 
     np.shape(label_data_all), 
     np.shape(label_type_data_all), 
     np.shape(mask_data_all),
     np.shape(last_label_all),
     np.shape(last_label_p_all),
-    np.shape(last_label_type_all))
+    np.shape(last_label_type_all),
+    np.shape(last_cate_norm_all))
 )
 
 hf = h5py.File(f"../dataset/train_data{VERSION}{FILTER}.hdf5", "w")
@@ -204,6 +228,7 @@ hf.create_dataset('label_type', data=label_type_data_all[idx[:train_size]])
 hf.create_dataset('last_label', data=last_label_all[idx[:train_size]])
 hf.create_dataset('last_label_p', data=last_label_p_all[idx[:train_size]])
 hf.create_dataset('last_label_type', data=last_label_type_all[idx[:train_size]])
+hf.create_dataset('last_cate_norm', data=last_cate_norm_all[idx[:train_size]])
 hf.create_dataset('mask', data=mask_data_all[idx[:train_size]])
 hf.close()
 
@@ -213,8 +238,8 @@ hf.create_dataset('label', data=label_data_all[idx[train_size:]])
 hf.create_dataset('label_type', data=label_type_data_all[idx[train_size:]])
 hf.create_dataset('last_label', data=last_label_all[idx[train_size:]])
 hf.create_dataset('last_label_p', data=last_label_p_all[idx[train_size:]])
-
 hf.create_dataset('last_label_type', data=last_label_type_all[idx[train_size:]])
+hf.create_dataset('last_cate_norm', data=last_cate_norm_all[idx[train_size:]])
 hf.create_dataset('mask', data=mask_data_all[idx[train_size:]])
 hf.close()
 

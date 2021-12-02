@@ -41,7 +41,7 @@ print(len(initial_home_video_ids))
 
 removed_videos = []
 for video in unique_home_video_id.keys():
-    if unique_home_video_id[video] > 10 and unique_home_video_id[video] < 1000:
+    if unique_home_video_id[video] > 0 and unique_home_video_id[video] < 1000:
         removed_videos.append(video)
 for video in removed_videos:
     del unique_home_video_id[video]

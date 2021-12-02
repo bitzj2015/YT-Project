@@ -113,20 +113,18 @@ if __name__ == "__main__":
             ray.shutdown()
 
     elif task == "rl_eval":
-        with open("../obfuscation/results/test_user_trace_0.2_reddit_new2_0_new.json", "r") as json_file:
+        tag = "final_new2_cate_test"
+        bias = 0
+        with open(f"../obfuscation/results/test_user_trace_0.2_{tag}_0_new.json", "r") as json_file:
             rl_user_data = json.load(json_file)
-    
-        video_seqs = {}
+        
         batch = []
-        for _ in range(2):
-            for i in range(150):
-                video_seqs[f"base_{i}"] = rl_user_data["base"][str(i)]
-            batch.append(video_seqs)
-
-        video_seqs = {}
-        for _ in range(2):
-            for i in range(150):
-                video_seqs[f"obfu_{i}"] = rl_user_data["obfu"][str(i)]
+        for i in range(20):
+            video_seqs = {}
+            for j in range(75):
+                video_seqs[f"base_{i*75+j+bias}"] = rl_user_data["base"][str(i*75+j)]
+            for j in range(75):
+                video_seqs[f"obfu_{i*75+j+bias}"] = rl_user_data["obfu"][str(i*75+j)]
             batch.append(video_seqs)
     
         logging.basicConfig(
@@ -141,23 +139,19 @@ if __name__ == "__main__":
 
         for i in tqdm(range(len(batch))):
             ray.init()
-            run_docker(batch[i], logger=logger, real_root="$PWD/docker-volume/crawls_rl_reddit_new2", timeout=45)
+            run_docker(batch[i], logger=logger, real_root=f"$PWD/docker-volume/crawls_rl_{tag}4", timeout=45)
             ray.shutdown()
 
-        with open("../obfuscation/results/test_user_trace_0.2_reddit_new2_1_new.json", "r") as json_file:
+        with open(f"../obfuscation/results/test_user_trace_0.2_{tag}_1_new.json", "r") as json_file:
             rl_user_data = json.load(json_file)
     
-        video_seqs = {}
         batch = []
-        for _ in range(2):
-            for i in range(150):
-                video_seqs[f"base_{i}"] = rl_user_data["base"][str(i)]
-            batch.append(video_seqs)
-
-        video_seqs = {}
-        for _ in range(2):
-            for i in range(150):
-                video_seqs[f"obfu_{i}"] = rl_user_data["obfu"][str(i)]
+        for i in range(20):
+            video_seqs = {}
+            for j in range(75):
+                video_seqs[f"base_{i*75+j+bias}"] = rl_user_data["base"][str(i*75+j)]
+            for j in range(75):
+                video_seqs[f"obfu_{i*75+j+bias}"] = rl_user_data["obfu"][str(i*75+j)]
             batch.append(video_seqs)
     
         logging.basicConfig(
@@ -172,5 +166,5 @@ if __name__ == "__main__":
 
         for i in tqdm(range(len(batch))):
             ray.init()
-            run_docker(batch[i], logger=logger, real_root="$PWD/docker-volume/crawls_rand_reddit_new2", timeout=45)
+            run_docker(batch[i], logger=logger, real_root=f"$PWD/docker-volume/crawls_rand_{tag}4", timeout=45)
             ray.shutdown()

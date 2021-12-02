@@ -141,20 +141,26 @@ class Denoiser(object):
 
     def train(self, train_dataloader):
         self.denoiser_model.train()
+        loss_all, kl_div_all = 0, 0
         for i, batch in enumerate(train_dataloader):
             input_vu, input_vo, label_ro, label_ru = batch["input_vu"], batch["input_vo"], batch["label_ro"], batch["label_ru"]
             loss, kl_div = self.denoiser_model(input_vu, input_vo, label_ro, label_ru)
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+            loss_all += loss.item()
+            kl_div_all += kl_div
 
-        return loss, kl_div
+        return loss_all / (i+1), kl_div / (i+1)
 
     def eval(self, eval_dataloader):
         self.denoiser_model.eval()
+        loss_all, kl_div_all = 0, 0
         for i, batch in enumerate(eval_dataloader):
             input_vu, input_vo, label_ro, label_ru = batch["input_vu"], batch["input_vo"], batch["label_ro"], batch["label_ru"]
             loss, kl_div = self.denoiser_model(input_vu, input_vo, label_ro, label_ru)
+            loss_all += loss.item()
+            kl_div_all += kl_div
 
-        return loss, kl_div
+        return loss_all / (i+1), kl_div / (i+1)
             

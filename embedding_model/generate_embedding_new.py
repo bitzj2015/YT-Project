@@ -11,7 +11,7 @@ import ray
 
 emb_model = SentenceTransformer('all-MiniLM-L6-v2')
 
-VERSION = "rl_new"
+VERSION = "rand_final_new2_cate_test4"
 TYPE = ""
 MAX_LEN = 256
 
@@ -70,7 +70,7 @@ hf.create_dataset('embeddings', data=embeddings)
 hf.create_dataset('video_ids', data=list(video_ids.keys()))
 hf.close()
 
-VERSION = "rand_new"
+VERSION = "rand_reddit_new2"
 TYPE = ""
 MAX_LEN = 256
 
