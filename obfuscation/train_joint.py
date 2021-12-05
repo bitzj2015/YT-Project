@@ -3,7 +3,7 @@ sys.path.append('../surrogate_model')
 sys.path.append('../denoiser')
 import torch
 import torch.optim as optim
-from env_rf import *
+from env_joint import *
 from agent import *
 from config import *
 from constants import *
@@ -67,10 +67,13 @@ rl_model = A2Clstm(env_args, video_embeddings).to(device)
 rl_optimizer = optim.Adam(rl_model.parameters(), lr=env_args.rl_lr)
 rl_agent = Agent(rl_model, rl_optimizer, env_args)
 
-denoiser = Denoiser(emb_dim=video_embeddings.shape[0], hidden_dim=256, video_embeddings=video_embeddings, device=device)
+# Define denoiser
+denoiser_model = DenoiserNet(emb_dim=video_embeddings.shape[0], hidden_dim=256, video_embeddings=video_embeddings, device=device)
+denoiser_optimizer = optim.Adam(denoiser_model.parameters(), lr=env_args.denoiser_rl)
+denoiser = Denoiser(denoiser_model=denoiser_model, optimizer=denoiser_optimizer, logger=logger)
+
 # Start ray  
 ray.init()
-
 
 if not args.eval:
     # Load training inputs
@@ -85,7 +88,7 @@ if not args.eval:
 
     # Initialize envrionment and workers
     workers = [RolloutWorker.remote(env_args, train_inputs[i].tolist(), i) for i in range(env_args.num_browsers)]
-    env = Env(env_args, yt_model, rl_agent, workers, seed=0, id2video_map=ID2VIDEO)
+    env = Env(env_args, yt_model, denoiser, rl_agent, workers, seed=0, id2video_map=ID2VIDEO)
     
     # Start RL agent training loop
     losses = []
@@ -93,8 +96,29 @@ if not args.eval:
     test_losses = []
     test_rewards = []
     # Start  training
+    
     best_reward = -100
     for ep in range(50):
+        # Update denoiser
+        base_persona, obfu_persona, base_rec, obfu_rec = [], [], [] ,[]
+        for i in range(train_inputs.shape[0] // env_args.num_browsers):
+            for j in range(env_args.num_browsers):
+                env.workers[j].user_videos = train_inputs[i * env_args.num_browsers + j].tolist()
+            env.start_env()
+            _, _ = env.rollout()
+            base_persona += env.watch_history_base
+            obfu_persona += env.watch_history
+            base_rec += env.cur_cate_base
+            obfu_rec += env.cur_cate
+            env.stop_env(save_param=False)
+        denoiser_train_loader, denoiser_test_loader = get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, env_args.num_browsers)
+        for round in range(5):
+            env_args.logger.info(f"Training denoiser round: {round}")
+            env.update_denoiser(denoiser_train_loader)
+        env_args.logger.info(f"Testing denoiser")
+        env.update_denoiser(denoiser_test_loader, train_denoiser=False)
+
+        # Update obfuscator (rl agent)
         env.rl_agent.train()
         for i in range(train_inputs.shape[0] // env_args.num_browsers):
             for j in range(env_args.num_browsers):

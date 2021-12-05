@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
 
 def kl_divergence(p, q):
 	return sum(p[i] * np.log2(p[i]/q[i]) for i in range(len(p)))
@@ -16,7 +17,7 @@ class DenoiserNet(torch.nn.Module):
         # Used to encode non-obfuscated videos
         self.lstm_vu = nn.LSTM(
             input_size=emb_dim,
-            hidden_size=hidden_dim,
+            hidden_size=hidden_dim, #256
             num_layers=2,
             bidirectional=False,
             dropout=0.2,
@@ -47,7 +48,7 @@ class DenoiserNet(torch.nn.Module):
         self.relu = nn.ReLU().to(self.device)
         self.train()
 
-    def infer(self, input_vu, input_vo, label_ro, with_graph=False):
+    def get_rec(self, input_vu, input_vo, label_ro, with_graph=False):
         self.eval()
         batch_size, seq_len = input_vu.shape
         # input_vu = self.graph_embeddings(input_vu.reshape(-1).tolist(), with_graph).reshape(batch_size, seq_len, self.emb_dim)
@@ -135,9 +136,10 @@ class DenoiserDataset(Dataset):
 
 
 class Denoiser(object):
-    def __init__(self, denoiser_model, optimizer):
+    def __init__(self, denoiser_model, optimizer, logger):
         self.denoiser_model = denoiser_model
         self.optimizer = optimizer
+        self.logger = logger
 
     def train(self, train_dataloader):
         self.denoiser_model.train()
@@ -151,7 +153,7 @@ class Denoiser(object):
             loss_all += loss.item()
             kl_div_all += kl_div
 
-        return loss_all / (i+1), kl_div / (i+1)
+        return loss_all / (i+1), kl_div_all / (i+1)
 
     def eval(self, eval_dataloader):
         self.denoiser_model.eval()
@@ -162,5 +164,15 @@ class Denoiser(object):
             loss_all += loss.item()
             kl_div_all += kl_div
 
-        return loss_all / (i+1), kl_div / (i+1)
+        return loss_all / (i+1), kl_div_all / (i+1)
+
+def get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, batch_size=50):
+    train_size = int(len(base_persona) * 0.8)
+    train_dataset = DenoiserDataset(base_persona[:train_size], obfu_persona[:train_size], base_rec[:train_size], obfu_rec[:train_size])
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+    test_dataset = DenoiserDataset(base_persona[train_size:], obfu_persona[train_size:], base_rec[train_size:], obfu_rec[train_size:])
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    return train_loader, test_loader
             

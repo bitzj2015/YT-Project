@@ -17,6 +17,8 @@ class EnvConfig(object):
         T=1,
         rl_lr=0.001,
         action_dim=100,
+        reward_dim=2,
+        reward_w=[1,0],
         device="cpu",
         agent_path="./param/agent.pkl", 
         logger=None, 
@@ -37,6 +39,8 @@ class EnvConfig(object):
         self.T = T
         self.rl_lr = rl_lr
         self.action_dim = action_dim
+        self.reward_dim = reward_dim
+        self.reward_w = reward_w
         self.device = device
         self.agent_path = agent_path
         self.logger = logger
