@@ -59,7 +59,7 @@ yt_model = torch.load(
 
 # Define environment configuration and rl agent
 env_args = EnvConfig(action_dim=video_embeddings.shape[0], device=device, agent_path=args.agent_path, alpha=args.alpha, logger=logger, version=args.version)
-video_embeddings = torch.from_numpy(video_embeddings).to(env_args.device)
+video_embeddings = torch.from_numpy(video_embeddings)
 yt_model.device = device
 yt_model.video_embeddings = video_embeddings.to(device)
 yt_model.graph_embeddings.device = device
@@ -81,7 +81,7 @@ video_graph_embeddings = GraphEncoder(
 )
 
 # Define rl model
-rl_model = A2Clstm(env_args, video_embeddings, video_graph_embeddings).to(device)
+rl_model = A2Clstm(env_args, video_embeddings.to(env_args.device), video_graph_embeddings).to(device)
 rl_optimizer = optim.Adam(rl_model.parameters(), lr=env_args.rl_lr)
 rl_agent = Agent(rl_model, rl_optimizer, env_args)
 

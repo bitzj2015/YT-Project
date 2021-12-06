@@ -45,7 +45,7 @@ class RolloutWorker(object):
         self.pre_rewards = self.cur_rewards
         self.cur_rewards = cur_reward
         if self.user_id == 0:
-            self.logger.info("cur_reward: {}".format(str(self.cur_rewards)))
+            self.logger.info("User 0, cur_reward: {}".format(str(self.cur_rewards)))
     
     def rollout(self, obfuscation_video=-1):
         if self.user_step >= len(self.user_videos):
