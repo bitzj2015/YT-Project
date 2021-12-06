@@ -15,5 +15,8 @@ print(len(ID2VIDEO.keys()))
 with open(f"./results/bias_weight_new.json", "r") as json_file:
     BIAS_WEIGHT = json.load(json_file)
 
+with open(f"../dataset/video_adj_list_{VERSION}_w.json", "r") as json_file:
+    video_graph_adj_mat = json.load(json_file)
+
 def kl_divergence(p, q):
 	return sum(p[i] * np.log2(p[i]/q[i]) for i in range(len(p)))

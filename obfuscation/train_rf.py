@@ -6,6 +6,8 @@ from env_rf import *
 from agent import *
 from config import *
 from constants import *
+from graph_encoder import GraphEncoder
+from graph_aggregator import GraphAggregator
 import argparse
 import h5py
 import json
@@ -53,6 +55,8 @@ yt_model = torch.load(
     map_location=device
 ).to(device)
 
+
+
 # Define environment configuration and rl agent
 env_args = EnvConfig(action_dim=video_embeddings.shape[0], device=device, agent_path=args.agent_path, alpha=args.alpha, logger=logger, version=args.version)
 video_embeddings = torch.from_numpy(video_embeddings).to(env_args.device)
@@ -60,7 +64,25 @@ yt_model.device = device
 yt_model.video_embeddings = video_embeddings.to(device)
 yt_model.graph_embeddings.device = device
 yt_model.graph_embeddings.aggregator.device = device
-rl_model = A2Clstm(env_args, video_embeddings).to(device)
+
+# Define GNN 
+video_embeddings = torch.from_numpy(video_embeddings)
+agg_video_graph = GraphAggregator(
+    video_embeddings=video_embeddings, 
+    emb_dim=env_args.emb_dim, 
+    add_edge=True,
+    device=device
+)
+video_graph_embeddings = GraphEncoder(
+    video_embeddings=video_embeddings, 
+    emb_dim=env_args.emb_dim,  
+    video_graph_adj_mat=video_graph_adj_mat, 
+    aggregator=agg_video_graph,
+    device=device
+)
+
+# Define rl model
+rl_model = A2Clstm(env_args, video_embeddings, video_graph_embeddings).to(device)
 rl_optimizer = optim.Adam(rl_model.parameters(), lr=env_args.rl_lr)
 rl_agent = Agent(rl_model, rl_optimizer, env_args)
 

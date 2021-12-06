@@ -4,11 +4,10 @@ import torch.nn.functional as F
 
 
 class A2Clstm(torch.nn.Module):
-    def __init__(self, env_args, video_embeddings, graph_embeddings):
+    def __init__(self, env_args, video_embeddings):
         super(A2Clstm,self).__init__()
         self.env_args = env_args
         self.video_embeddings = video_embeddings # num_videos * emb_dim
-        self.graph_embeddings = graph_embeddings
         self.convs = nn.ModuleList([nn.Conv2d(1, self.env_args.kernel_dim, (self.env_args.K, self.env_args.emb_dim))
                                     for self.env_args.K in self.env_args.kernel_size])
         self.fc = nn.Linear(len(self.env_args.kernel_size) * self.env_args.kernel_dim, self.env_args.hidden_dim)
@@ -24,10 +23,10 @@ class A2Clstm(torch.nn.Module):
         # self.actor_linear = nn.Linear(self.env_args.hidden_dim, self.env_args.action_dim)
         self.actor_linear = nn.Linear(self.env_args.hidden_dim, self.env_args.emb_dim)
 
-    def forward(self, inputs, with_graph=True):
+    def forward(self, inputs):
         inputs, (hx, cx) = inputs
         batch_size, seq_len = inputs.shape
-        inputs = self.graph_embeddings(inputs.reshape(-1).tolist(), with_graph).reshape(batch_size, seq_len, self.emb_dim)
+        inputs = self.video_embeddings[inputs.reshape(-1).tolist()].reshape(batch_size, 1, seq_len, self.env_args.emb_dim)
         inputs = [F.relu(conv(inputs)).squeeze(3) for conv in self.convs]
         inputs = [F.max_pool1d(i, i.size(2)).squeeze(2) for i in inputs]
         concated = torch.cat(inputs, 1)
