@@ -179,6 +179,7 @@ class Denoiser(object):
 
 def get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, batch_size=50, max_len=50):
     train_size = int(len(base_persona) * 0.8)
+    print(train_size, len(base_persona))
     train_dataset = DenoiserDataset(base_persona[:train_size], obfu_persona[:train_size], base_rec[:train_size], obfu_rec[:train_size], max_len)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
