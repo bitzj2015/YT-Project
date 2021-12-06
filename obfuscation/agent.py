@@ -27,7 +27,7 @@ class A2Clstm(torch.nn.Module):
     def forward(self, inputs, with_graph=True):
         inputs, (hx, cx) = inputs
         batch_size, seq_len = inputs.shape
-        inputs = self.graph_embeddings(inputs.reshape(-1).tolist(), with_graph).reshape(batch_size, seq_len, self.env_args.emb_dim)
+        inputs = self.graph_embeddings(inputs.reshape(-1).tolist(), with_graph).reshape(batch_size, 1, seq_len, self.env_args.emb_dim)
         inputs = [F.relu(conv(inputs)).squeeze(3) for conv in self.convs]
         inputs = [F.max_pool1d(i, i.size(2)).squeeze(2) for i in inputs]
         concated = torch.cat(inputs, 1)
