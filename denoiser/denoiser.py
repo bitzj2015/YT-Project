@@ -72,11 +72,11 @@ class DenoiserNet(torch.nn.Module):
     def forward(self, input_vu, input_vo, label_ro, label_ru, with_graph=False):
         # Get embeddings for non-obfuscated videos
         batch_size, seq_len = input_vu.shape
-        input_vu = self.graph_embeddings(input_vu.reshape(-1).tolist(), with_graph).reshape(batch_size, seq_len, self.emb_dim)
+        input_vu = self.self.video_embeddings[input_vu.reshape(-1).tolist()].reshape(batch_size, seq_len, self.emb_dim)
 
         # Get embeddings for obfuscated videos
         batch_size, seq_len = input_vo.shape
-        input_vo = self.graph_embeddings(input_vo.reshape(-1).tolist(), with_graph).reshape(batch_size, seq_len, self.emb_dim)
+        input_vo = self.self.video_embeddings[input_vo.reshape(-1).tolist()].reshape(batch_size, seq_len, self.emb_dim)
 
         label_ro = label_ro.to(self.device)
         label_ru = label_ru.to(self.device)
