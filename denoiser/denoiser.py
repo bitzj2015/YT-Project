@@ -133,7 +133,12 @@ class DenoiserDataset(Dataset):
         base_rec = self.base_rec[idx]
         obfu_rec = self.obfu_rec[idx]
 
-        sample = {"input_vu": base_persona, "input_vo": obfu_persona, "label_ru": base_rec, "label_ro": obfu_rec}
+        sample = {
+            "input_vu": torch.from_numpy(base_persona), 
+            "input_vo": torch.from_numpy(obfu_persona), 
+            "label_ru": torch.from_numpy(base_rec), 
+            "label_ro": torch.from_numpy(obfu_rec)
+        }
         return sample
 
 
