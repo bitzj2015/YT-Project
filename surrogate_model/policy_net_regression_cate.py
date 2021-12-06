@@ -5,6 +5,7 @@ import numpy as np
 from constants import *
 import math
 
+
 class PolicyNetRegression(torch.nn.Module):
     def __init__(self, emb_dim, hidden_dim, graph_embeddings, video_embeddings, device="cpu", topk=-1, use_rand=-1, num_user_state=100):
         super(PolicyNetRegression,self).__init__()
@@ -45,7 +46,6 @@ class PolicyNetRegression(torch.nn.Module):
          
         return emb.cpu().numpy()
 
-
     def forward(self, inputs, label, label_cate, label_type, mask, with_graph=False):
 
         batch_size, seq_len = inputs.shape
@@ -70,7 +70,6 @@ class PolicyNetRegression(torch.nn.Module):
             outputs.append(out[i][sum(mask[i]) - 1])
         outputs = torch.stack(outputs, dim=0).squeeze()
         
-
         # batch_size * hidden_dim -> batch_size * num_user_state * emb_dim
         outputs = self.relu(self.linear(outputs))
 
@@ -97,6 +96,5 @@ class PolicyNetRegression(torch.nn.Module):
             avg_kl_distance += kl_divergence(last_cate[i], pred_last_cate[i])
         avg_kl_distance /= batch_size
             
-        
         # print(label_map)
         return -logits * 0.5, -logits * 0.5, -last_acc, batch_size, avg_kl_distance

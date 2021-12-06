@@ -158,7 +158,7 @@ class Env(object):
         self.cur_cate_base = self.yt_model.get_rec(self.base_state, topk=100)
 
         # Get denoised non-obfuscated recommendations
-        cur_cate_base_pred = self.denoiser.denoiser_model.infer(self.base_state, self.state, torch.from_numpy(self.cur_cate.to(self.env_args.device))) # input_vu, input_vo, label_ro
+        cur_cate_base_pred = self.denoiser.denoiser_model.get_rec(self.base_state, self.state, torch.from_numpy(self.cur_cate).to(self.env_args.device)) # input_vu, input_vo, label_ro
 
         # Reward for obfuscator
         cur_reward_obfuscator = [kl_divergence(self.cur_cate_base[i], self.cur_cate[i]) for i in range(len(self.workers))]
@@ -167,11 +167,13 @@ class Env(object):
         cur_reward_denoiser = [-kl_divergence(self.cur_cate_base[i], cur_cate_base_pred[i]) for i in range(len(self.workers))]
 
         # Total rewards
-        cur_reward = [self.env_args.w[0] * cur_reward_obfuscator[i] + self.env_args.w[1] * cur_reward_denoiser[i] for i in range(len(self.workers))]
         self.env_args.logger.info("KL distance of obfuscation: {}, denoiser: {}".format(np.mean(cur_reward_obfuscator), np.mean(cur_reward_denoiser)))
-
+        cur_reward = [self.env_args.reward_w[0] * cur_reward_obfuscator[i] + self.env_args.reward_w[1] * cur_reward_denoiser[i] for i in range(len(self.workers))]
+        
         # Send reward back to worker
         ray.get([self.workers[i].update_reward.remote(cur_reward[i]) for i in range(len(self.workers))])
+        self.cur_cate = list(self.cur_cate)
+        self.cur_cate_base = list(self.cur_cate_base)
 
     def get_next_obfuscation_videos(self, terminate=False):
         self.state = self.get_state_from_workers()
@@ -241,6 +243,8 @@ class Env(object):
         self.all_reward_gains = []
         self.all_watch_history_base = []
         self.all_watch_history = []
+        self.cur_cate_base = []
+        self.cur_cate = []
         self.env_args.logger.info("clear env")
         if save_param:
             self.rl_agent.save_param()

@@ -52,18 +52,19 @@ class DenoiserNet(torch.nn.Module):
         self.eval()
         batch_size, seq_len = input_vu.shape
         # input_vu = self.graph_embeddings(input_vu.reshape(-1).tolist(), with_graph).reshape(batch_size, seq_len, self.emb_dim)
-        input_vu = self.video_embeddings[input_vu.reshape(-1).tolist()].reshape(batch_size, 1, seq_len, self.emb_dim)
+        input_vu = self.video_embeddings[input_vu.reshape(-1).tolist()].reshape(batch_size, seq_len, self.emb_dim)
 
         batch_size, seq_len = input_vo.shape
         # input_vo = self.graph_embeddings(input_vo.reshape(-1).tolist(), with_graph).reshape(batch_size, seq_len, self.emb_dim)
-        input_vo = self.video_embeddings[input_vo.reshape(-1).tolist()].reshape(batch_size, 1, seq_len, self.emb_dim)
+        input_vo = self.video_embeddings[input_vo.reshape(-1).tolist()].reshape(batch_size, seq_len, self.emb_dim)
 
         label_ro = label_ro.to(self.device)
 
         encoded_vu, _ = self.lstm_vu(input_vu)
         encoded_vo, _ = self.lstm_vu(input_vo)
         encoded_ro = self.relu(self.linear_ro(label_ro))
-        decoded_ru = self.relu(self.linear_ru(torch.stack([encoded_vu, encoded_vo, encoded_ro], axis=-1)))
+        # print(encoded_vu[:, -1].size(), encoded_ro.size(), torch.cat([encoded_vu[:, -1], encoded_vo[:, -1], encoded_ro], axis=-1).size())
+        decoded_ru = self.relu(self.linear_ru(torch.cat([encoded_vu[:, -1], encoded_vo[:, -1], encoded_ro], axis=-1)))
         outputs = F.softmax(decoded_ru, -1)
          
         return outputs.detach().cpu().numpy()
@@ -152,6 +153,8 @@ class Denoiser(object):
             self.optimizer.step()
             loss_all += loss.item()
             kl_div_all += kl_div
+            if i % 10 == 0:
+                self.logger.info(f"Step: {i}, loss: {loss_all / (i+1)}, kl_div: {kl_div_all / (i+1)}")
 
         return loss_all / (i+1), kl_div_all / (i+1)
 

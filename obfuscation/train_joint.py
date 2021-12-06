@@ -25,7 +25,7 @@ parser.add_argument('--alpha', dest="alpha", type=float, default=0.2)
 parser.add_argument('--use-rand', dest="use_rand", type=int, default=0)
 parser.add_argument('--version', dest="version", type=str, default="reddit")
 parser.add_argument('--eval', dest="eval", default=False, action='store_true')
-parser.add_argument('--ytmodel-path', dest="ytmodel_path", type=str, default="/scratch/param/policy_no_graph_edge_reg_new73_100_out_64_001_atten_reddit_filter_aug.pt")
+parser.add_argument('--ytmodel-path', dest="ytmodel_path", type=str, default="/scratch/param/policy_no_graph_edge_reg_new73_100_out_64_001_atten_final_filter_cate2.pt")
 args = parser.parse_args()
 
 logging.basicConfig(
@@ -68,8 +68,8 @@ rl_optimizer = optim.Adam(rl_model.parameters(), lr=env_args.rl_lr)
 rl_agent = Agent(rl_model, rl_optimizer, env_args)
 
 # Define denoiser
-denoiser_model = DenoiserNet(emb_dim=video_embeddings.shape[0], hidden_dim=256, video_embeddings=video_embeddings, device=device)
-denoiser_optimizer = optim.Adam(denoiser_model.parameters(), lr=env_args.denoiser_rl)
+denoiser_model = DenoiserNet(emb_dim=video_embeddings.shape[1], hidden_dim=256, video_embeddings=video_embeddings, device=device)
+denoiser_optimizer = optim.Adam(denoiser_model.parameters(), lr=env_args.denoiser_lr)
 denoiser = Denoiser(denoiser_model=denoiser_model, optimizer=denoiser_optimizer, logger=logger)
 
 # Start ray  
@@ -105,7 +105,7 @@ if not args.eval:
             for j in range(env_args.num_browsers):
                 env.workers[j].user_videos = train_inputs[i * env_args.num_browsers + j].tolist()
             env.start_env()
-            _, _ = env.rollout()
+            _, _ = env.rollout(train_rl=False)
             base_persona += env.watch_history_base
             obfu_persona += env.watch_history
             base_rec += env.cur_cate_base

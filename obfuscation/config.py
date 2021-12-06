@@ -16,6 +16,7 @@ class EnvConfig(object):
         GAMMA=0.99,
         T=1,
         rl_lr=0.001,
+        denoiser_lr=0.001,
         action_dim=100,
         reward_dim=2,
         reward_w=[1,0],
@@ -38,6 +39,7 @@ class EnvConfig(object):
         self.GAMMA=GAMMA
         self.T = T
         self.rl_lr = rl_lr
+        self.denoiser_lr = denoiser_lr
         self.action_dim = action_dim
         self.reward_dim = reward_dim
         self.reward_w = reward_w

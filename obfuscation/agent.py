@@ -37,7 +37,7 @@ class A2Clstm(torch.nn.Module):
         x, (hx, cx) = self.lstm(x, (hx, cx)) # Single step forward
         x = x.view(x.size(0), -1)
         actor_out = torch.matmul(self.actor_linear(x), self.video_embeddings.t())
-        print(actor_out.size())
+        # print(actor_out.size())
 
         return self.critic_linear(x), actor_out, hx, cx
 
