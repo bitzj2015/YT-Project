@@ -99,8 +99,8 @@ class Env(object):
         self.env_args = env_args
         self.all_rewards = []
         self.all_reward_gains = []
-        self.watch_history = []
-        self.watch_history_base = []
+        self.all_watch_history = []
+        self.all_watch_history_base = []
         self.cur_cate = []
         self.cur_cate_base = []
         self.yt_model = yt_model
@@ -127,8 +127,8 @@ class Env(object):
     def get_watch_history_from_workers(self):
         all_watch_history = ray.get([worker.get_watch_history.remote() for worker in self.workers])
         for (watch_history_base, watch_history) in all_watch_history:
-            self.watch_history_base.append([self.id2video_map[str(index)] for index in watch_history_base])
-            self.watch_history.append([self.id2video_map[str(index)] for index in watch_history])
+            self.all_watch_history_base.append([self.id2video_map[str(index)] for index in watch_history_base])
+            self.all_watch_history.append([self.id2video_map[str(index)] for index in watch_history])
         
     def get_reward_from_workers(self):
         self.all_rewards = ray.get([worker.get_reward.remote() for worker in self.workers])
