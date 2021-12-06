@@ -125,14 +125,10 @@ class Env(object):
         ray.get([worker.clear_worker.remote() for worker in self.workers])
     
     def get_watch_history_from_workers(self):
-        rets = []
         all_watch_history = ray.get([worker.get_watch_history.remote() for worker in self.workers])
         for (watch_history_base, watch_history) in all_watch_history:
-            ret = {}
-            ret["base"] = [self.id2video_map[str(index)] for index in watch_history_base]
-            ret["obfu"] = [self.id2video_map[str(index)] for index in watch_history]
-            rets.append(ret) 
-        return rets
+            self.watch_history_base.append([self.id2video_map[str(index)] for index in watch_history_base])
+            self.watch_history.append([self.id2video_map[str(index)] for index in watch_history])
         
     def get_reward_from_workers(self):
         self.all_rewards = ray.get([worker.get_reward.remote() for worker in self.workers])

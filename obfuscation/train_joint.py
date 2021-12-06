@@ -106,10 +106,12 @@ if not args.eval:
                 env.workers[j].user_videos = train_inputs[i * env_args.num_browsers + j].tolist()
             env.start_env()
             _, _ = env.rollout(train_rl=False)
+            env.get_watch_history_from_workers()
             base_persona += env.watch_history_base
             obfu_persona += env.watch_history
             base_rec += env.cur_cate_base
             obfu_rec += env.cur_cate
+            # print(len(base_persona))
             env.stop_env(save_param=False)
         denoiser_train_loader, denoiser_test_loader = get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, env_args.num_browsers)
         for round in range(5):
