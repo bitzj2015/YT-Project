@@ -98,6 +98,7 @@ if not args.eval:
     # Start  training
     
     best_reward = -100
+    torch.save(env.denoiser.denoiser_model.state_dict(), args.denoiser_path)
     for ep in range(50):
         # Update denoiser
         base_persona, obfu_persona, base_rec, obfu_rec = [], [], [] ,[]
@@ -120,8 +121,12 @@ if not args.eval:
         for round in range(5):
             env_args.logger.info(f"Training denoiser round: {round}")
             env.update_denoiser(denoiser_train_loader)
+        torch.save(env.denoiser.denoiser_model.state_dict(), args.denoiser_path)
         env_args.logger.info(f"Testing denoiser")
-        env.update_denoiser(denoiser_test_loader, train_denoiser=False)
+        try:
+            env.update_denoiser(denoiser_test_loader, train_denoiser=False)
+        except:
+            env_args.logger.info(f"Testing denoiser failed")
 
         # Update obfuscator (rl agent)
         env.rl_agent.train()

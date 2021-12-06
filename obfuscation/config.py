@@ -19,7 +19,7 @@ class EnvConfig(object):
         denoiser_lr=0.001,
         action_dim=100,
         reward_dim=2,
-        reward_w=[1,0.1],
+        reward_w=[1,0.],
         device="cpu",
         agent_path="./param/agent.pkl", 
         logger=None, 
