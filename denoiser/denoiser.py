@@ -154,6 +154,7 @@ class Denoiser(object):
         for i, batch in enumerate(train_dataloader):
             input_vu, input_vo, label_ro, label_ru = batch["input_vu"], batch["input_vo"], batch["label_ro"], batch["label_ru"]
             loss, kl_div = self.denoiser_model(input_vu, input_vo, label_ro, label_ru)
+            loss = loss.mean(0)
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
@@ -170,6 +171,7 @@ class Denoiser(object):
         for i, batch in enumerate(eval_dataloader):
             input_vu, input_vo, label_ro, label_ru = batch["input_vu"], batch["input_vo"], batch["label_ro"], batch["label_ru"]
             loss, kl_div = self.denoiser_model(input_vu, input_vo, label_ro, label_ru)
+            loss = loss.mean(0)
             loss_all += loss.item()
             kl_div_all += kl_div
 

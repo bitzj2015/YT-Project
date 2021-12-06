@@ -66,7 +66,6 @@ yt_model.graph_embeddings.device = device
 yt_model.graph_embeddings.aggregator.device = device
 
 # Define GNN 
-video_embeddings = torch.from_numpy(video_embeddings)
 agg_video_graph = GraphAggregator(
     video_embeddings=video_embeddings, 
     emb_dim=env_args.emb_dim, 

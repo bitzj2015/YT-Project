@@ -4,7 +4,7 @@ sys.path.append('../denoiser')
 import torch
 import torch.optim as optim
 from env_joint import *
-from agent import *
+from agent_joint import *
 from config import *
 from constants import *
 from denoiser import *
