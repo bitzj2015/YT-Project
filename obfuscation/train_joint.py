@@ -101,6 +101,7 @@ if not args.eval:
     for ep in range(50):
         # Update denoiser
         base_persona, obfu_persona, base_rec, obfu_rec = [], [], [] ,[]
+        max_len = 0
         for i in range(train_inputs.shape[0] // env_args.num_browsers):
             for j in range(env_args.num_browsers):
                 env.workers[j].user_videos = train_inputs[i * env_args.num_browsers + j].tolist()
@@ -113,7 +114,9 @@ if not args.eval:
             obfu_rec += env.cur_cate
             # print(len(base_persona))
             env.stop_env(save_param=False)
-        denoiser_train_loader, denoiser_test_loader = get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, env_args.num_browsers)
+        for item in obfu_persona:
+            max_len = max(max_len, len(item))
+        denoiser_train_loader, denoiser_test_loader = get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, env_args.num_browsers, max_len)
         for round in range(5):
             env_args.logger.info(f"Training denoiser round: {round}")
             env.update_denoiser(denoiser_train_loader)

@@ -115,11 +115,12 @@ class DenoiserNet(torch.nn.Module):
 
 
 class DenoiserDataset(Dataset):
-    def __init__(self, base_persona, obfu_persona, base_rec, obfu_rec):
+    def __init__(self, base_persona, obfu_persona, base_rec, obfu_rec, max_len=50):
         self.base_persona = base_persona
         self.obfu_persona = obfu_persona
         self.base_rec = base_rec
         self.obfu_rec = obfu_rec
+        self.max_len = max_len
 
     def __len__(self):
         return np.shape(self.base_persona)[0]
@@ -127,8 +128,8 @@ class DenoiserDataset(Dataset):
     def __getitem__(self, idx):
         if type(idx) == torch.Tensor:
             idx = idx.item()
-        base_persona = self.base_persona[idx]
-        obfu_persona = self.obfu_persona[idx]
+        base_persona = self.base_persona[idx] + [0 for _ in range(40 - len(self.base_persona[idx]))]
+        obfu_persona = self.obfu_persona[idx] + [0 for _ in range(self.max_len - len(self.obfu_persona[idx]))]
         base_rec = self.base_rec[idx]
         obfu_rec = self.obfu_rec[idx]
 
@@ -169,12 +170,12 @@ class Denoiser(object):
 
         return loss_all / (i+1), kl_div_all / (i+1)
 
-def get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, batch_size=50):
+def get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, batch_size=50, max_len=50):
     train_size = int(len(base_persona) * 0.8)
-    train_dataset = DenoiserDataset(base_persona[:train_size], obfu_persona[:train_size], base_rec[:train_size], obfu_rec[:train_size])
+    train_dataset = DenoiserDataset(base_persona[:train_size], obfu_persona[:train_size], base_rec[:train_size], obfu_rec[:train_size], max_len)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-    test_dataset = DenoiserDataset(base_persona[train_size:], obfu_persona[train_size:], base_rec[train_size:], obfu_rec[train_size:])
+    test_dataset = DenoiserDataset(base_persona[train_size:], obfu_persona[train_size:], base_rec[train_size:], obfu_rec[train_size:], max_len)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     return train_loader, test_loader
