@@ -91,7 +91,7 @@ class DenoiserNet(torch.nn.Module):
         encoded_ro = self.relu(self.linear_ro(label_ro))
 
         # Predict non-obfuscated recommended video distribution
-        decoded_ru = self.relu(self.linear_ru(torch.stack([encoded_vu, encoded_vo, encoded_ro], axis=-1)))
+        decoded_ru = self.relu(self.linear_ru(torch.cat([encoded_vu[:, -1], encoded_vo[:, -1], encoded_ro], axis=-1)))
 
         logits = F.log_softmax(decoded_ru, -1)
         print("logits: ", logits.size(), label_ru.size())
