@@ -117,7 +117,7 @@ class DenoiserNet(torch.nn.Module):
 class DenoiserDataset(Dataset):
     def __init__(self, base_persona, obfu_persona, base_rec, obfu_rec):
         self.base_persona = base_persona
-        self.obfu_persoan = obfu_persona
+        self.obfu_persona = obfu_persona
         self.base_rec = base_rec
         self.obfu_rec = obfu_rec
 
