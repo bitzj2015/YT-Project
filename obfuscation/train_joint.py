@@ -107,8 +107,8 @@ if not args.eval:
             env.start_env()
             _, _ = env.rollout(train_rl=False)
             env.get_watch_history_from_workers()
-            base_persona += env.watch_history_base
-            obfu_persona += env.watch_history
+            base_persona += env.all_watch_history_base
+            obfu_persona += env.all_watch_history
             base_rec += env.cur_cate_base
             obfu_rec += env.cur_cate
             # print(len(base_persona))
