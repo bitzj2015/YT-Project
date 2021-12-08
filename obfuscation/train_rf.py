@@ -81,7 +81,7 @@ video_graph_embeddings = GraphEncoder(
 )
 
 # Define rl model
-rl_model = A2Clstm(env_args, video_embeddings.to(env_args.device), video_graph_embeddings).to(device)
+rl_model = A2Clstm(env_args, video_embeddings.to(env_args.device), video_graph_embeddings, with_graph=False).to(device)
 rl_optimizer = optim.Adam(rl_model.parameters(), lr=env_args.rl_lr)
 rl_agent = Agent(rl_model, rl_optimizer, env_args)
 

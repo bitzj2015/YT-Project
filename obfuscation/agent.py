@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class A2Clstm(torch.nn.Module):
-    def __init__(self, env_args, video_embeddings, graph_embeddings):
+    def __init__(self, env_args, video_embeddings, graph_embeddings, with_graph=True):
         super(A2Clstm,self).__init__()
         self.env_args = env_args
         self.video_embeddings = video_embeddings # num_videos * emb_dim
@@ -23,11 +23,12 @@ class A2Clstm(torch.nn.Module):
         self.critic_linear = nn.Linear(self.env_args.hidden_dim, 1)
         # self.actor_linear = nn.Linear(self.env_args.hidden_dim, self.env_args.action_dim)
         self.actor_linear = nn.Linear(self.env_args.hidden_dim, self.env_args.emb_dim)
+        self.with_graph = with_graph
 
-    def forward(self, inputs, with_graph=True):
+    def forward(self, inputs):
         inputs, (hx, cx) = inputs
         batch_size, seq_len = inputs.shape
-        inputs = self.graph_embeddings(inputs.reshape(-1).tolist(), with_graph).reshape(batch_size, 1, seq_len, self.env_args.emb_dim)
+        inputs = self.graph_embeddings(inputs.reshape(-1).tolist(), self.with_graph).reshape(batch_size, 1, seq_len, self.env_args.emb_dim)
         inputs = [F.relu(conv(inputs)).squeeze(3) for conv in self.convs]
         inputs = [F.max_pool1d(i, i.size(2)).squeeze(2) for i in inputs]
         concated = torch.cat(inputs, 1)

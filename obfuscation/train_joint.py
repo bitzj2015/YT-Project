@@ -63,6 +63,7 @@ yt_model.device = device
 yt_model.video_embeddings = video_embeddings.to(device)
 yt_model.graph_embeddings.device = device
 yt_model.graph_embeddings.aggregator.device = device
+yt_model.eval()
 rl_model = A2Clstm(env_args, video_embeddings).to(device)
 rl_optimizer = optim.Adam(rl_model.parameters(), lr=env_args.rl_lr)
 rl_agent = Agent(rl_model, rl_optimizer, env_args)
@@ -87,7 +88,7 @@ if not args.eval:
     env_args.logger.info("Testing data size: {}, No. of videos: {}.".format(test_inputs.shape, video_embeddings.shape[0]))
 
     # Initialize envrionment and workers
-    workers = [RolloutWorker.remote(env_args, train_inputs[i].tolist(), i) for i in range(env_args.num_browsers)]
+    workers = [RolloutWorker.remote(env_args, i) for i in range(env_args.num_browsers)]
     env = Env(env_args, yt_model, denoiser, rl_agent, workers, seed=0, id2video_map=ID2VIDEO)
     
     # Start RL agent training loop
@@ -103,9 +104,112 @@ if not args.eval:
         # Update denoiser
         base_persona, obfu_persona, base_rec, obfu_rec = [], [], [] ,[]
         max_len = 0
+        n_steps = train_inputs.shape[0] // env_args.num_browsers
+        env.rl_agent.eval()
+        for i in range(n_steps):
+            # for j in range(env_args.num_browsers):
+            #     env.workers[j].user_videos = train_inputs[i * env_args.num_browsers + j].tolist()
+            ray.get([env.workers[j].update_user_videos.remote(train_inputs[i * env_args.num_browsers + j].tolist()) for j in range(env_args.num_browsers)])
+            env.start_env()
+            _, _ = env.rollout(train_rl=False)
+            env.get_watch_history_from_workers()
+            base_persona += env.all_watch_history_base
+            obfu_persona += env.all_watch_history
+            base_rec += env.cur_cate_base
+            obfu_rec += env.cur_cate
+            print(ep, env.all_watch_history_base[0])
+            env.stop_env(save_param=False)
+            
+            
+        for item in obfu_persona:
+            max_len = max(max_len, len(item))
+            
+        denoiser_train_loader, denoiser_test_loader = get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, env_args.num_browsers, max_len)
+        for round in range(10):
+            env_args.logger.info(f"Training denoiser round: {round}")
+            env.update_denoiser(denoiser_train_loader)
+        torch.save(env.denoiser.denoiser_model.state_dict(), args.denoiser_path)
+        env_args.logger.info(f"Testing denoiser")
+        try:
+            env.update_denoiser(denoiser_test_loader, train_denoiser=False)
+        except:
+            env_args.logger.info(f"Testing denoiser failed")
+
+        # Update obfuscator (rl agent)
+        env.rl_agent.train()
+        for i in range(n_steps):
+            ray.get([env.workers[j].update_user_videos.remote(train_inputs[i * env_args.num_browsers + j].tolist()) for j in range(env_args.num_browsers)])
+
+            # One episode training
+            env.start_env()
+            loss, reward = env.rollout()
+            losses.append(loss)
+            rewards.append(reward)
+            
+            if i % 10 == 0:
+                env_args.logger.info(f"Train epoch: {ep}, episode: {i}, loss: {loss}, reward: {reward}")
+            if best_reward < np.mean(rewards[-n_steps:]):
+                env.stop_env()
+                best_reward = np.mean(rewards[-n_steps:])
+            else:
+                env.stop_env(save_param=False)
+
+        with open(f"./results/train_log_{args.alpha}_{args.version}.json", "w") as json_file:
+            json.dump({"loss": losses, "reward": rewards}, json_file)
+            
+        # Start testing
+        env.rl_agent.eval()
+        for i in range(test_inputs.shape[0] // env_args.num_browsers):
+            ray.get([env.workers[j].update_user_videos.remote(test_inputs[i * env_args.num_browsers + j].tolist()) for j in range(env_args.num_browsers)])
+
+            # One episode evaluation
+            env.start_env()
+            loss, reward = env.rollout(train_rl=False)
+            test_losses.append(loss)
+            test_rewards.append(reward)
+            
+            if i % 10 == 0:
+                env_args.logger.info(f"Test epoch: {ep}, episode: {i}, loss: {loss}, reward: {reward}")
+            env.stop_env(save_param=False)
+
+        with open(f"./results/eval_log_{args.alpha}_{args.version}.json", "w") as json_file:
+            json.dump({"loss": test_losses, "reward": test_rewards}, json_file)
+            
+else:
+    losses = []
+    rewards = []
+    # Load training inputs
+    with h5py.File(args.train_data_path, "r") as train_hf:
+        train_inputs = np.array(train_hf["input"][:])
+    env_args.logger.info("Training data size: {}, No. of videos: {}.".format(train_inputs.shape, video_embeddings.shape[0]))
+    
+    # Load testing data
+    with h5py.File(args.test_data_path, "r") as test_hf:
+        test_inputs = np.array(test_hf["input"][:])
+    env_args.logger.info("Testing data size: {}, No. of videos: {}.".format(test_inputs.shape, video_embeddings.shape[0]))
+        
+    # Load pretrained rl agent
+    env_args.logger.info("loading model parameters")
+    rl_agent.model.load_state_dict(torch.load(args.agent_path, map_location=device))
+    
+    
+    # Initialize envrionment and workers
+    workers = [RolloutWorker.remote(env_args, i) for i in range(env_args.num_browsers)]
+    env = Env(env_args, yt_model, denoiser, rl_agent, workers, seed=0, id2video_map=ID2VIDEO, use_rand=args.use_rand)
+    env.denoiser.denoiser_model.load_state_dict(torch.load(args.denoiser_path, map_location=device))
+
+    # Start testing
+    env.rl_agent.eval()
+    test_results = {"base": {}, "obfu": {}}
+    user_count = 0
+    random.seed(0)
+    np.random.seed(0)
+    for ep in range(1):
+        # Update denoiser
+        base_persona, obfu_persona, base_rec, obfu_rec = [], [], [] ,[]
+        max_len = 0
         for i in range(train_inputs.shape[0] // env_args.num_browsers):
-            for j in range(env_args.num_browsers):
-                env.workers[j].user_videos = train_inputs[i * env_args.num_browsers + j].tolist()
+            ray.get([env.workers[j].update_user_videos.remote(train_inputs[i * env_args.num_browsers + j].tolist()) for j in range(env_args.num_browsers)])
             env.start_env()
             _, _ = env.rollout(train_rl=False)
             env.get_watch_history_from_workers()
@@ -118,7 +222,7 @@ if not args.eval:
         for item in obfu_persona:
             max_len = max(max_len, len(item))
         denoiser_train_loader, denoiser_test_loader = get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, env_args.num_browsers, max_len)
-        for round in range(5):
+        for round in range(10):
             env_args.logger.info(f"Training denoiser round: {round}")
             env.update_denoiser(denoiser_train_loader)
         torch.save(env.denoiser.denoiser_model.state_dict(), args.denoiser_path)
@@ -127,77 +231,9 @@ if not args.eval:
             env.update_denoiser(denoiser_test_loader, train_denoiser=False)
         except:
             env_args.logger.info(f"Testing denoiser failed")
-
-        # Update obfuscator (rl agent)
-        env.rl_agent.train()
-        for i in range(train_inputs.shape[0] // env_args.num_browsers):
-            for j in range(env_args.num_browsers):
-                env.workers[j].user_videos = train_inputs[i * env_args.num_browsers + j].tolist()
-            # try:
-            # One episode training
-            env.start_env()
-            loss, reward = env.rollout()
-            losses.append(loss)
-            rewards.append(reward)
             
-            if i % 10 == 0:
-                env_args.logger.info(f"Train epoch: {ep}, episode: {i}, loss: {loss}, reward: {reward}")
-            if best_reward < np.mean(rewards[-112:]):
-                env.stop_env()
-                best_reward = np.mean(rewards[-112:])
-            else:
-                env.stop_env(save_param=False)
-            # except:
-            #     continue
-        with open(f"./results/train_log_{args.alpha}_{args.version}.json", "w") as json_file:
-            json.dump({"loss": losses, "reward": rewards}, json_file)
-            
-        # Start testing
-        env.rl_agent.eval()
         for i in range(test_inputs.shape[0] // env_args.num_browsers):
-            for j in range(env_args.num_browsers):
-                env.workers[j].user_videos = test_inputs[i * env_args.num_browsers + j].tolist()
-            # try:
-            # One episode training
-            env.start_env()
-            loss, reward = env.rollout(train_rl=False)
-            test_losses.append(loss)
-            test_rewards.append(reward)
-            
-            if i % 10 == 0:
-                env_args.logger.info(f"Test epoch: {ep}, episode: {i}, loss: {loss}, reward: {reward}")
-            env.stop_env(save_param=False)
-            # except:
-            #     continue
-        with open(f"./results/eval_log_{args.alpha}_{args.version}.json", "w") as json_file:
-            json.dump({"loss": test_losses, "reward": test_rewards}, json_file)
-            
-else:
-    losses = []
-    rewards = []
-    # Load testing data
-    with h5py.File(args.test_data_path, "r") as test_hf:
-        test_inputs = np.array(test_hf["input"][:])
-    env_args.logger.info("Testing data size: {}, No. of videos: {}.".format(test_inputs.shape, video_embeddings.shape[0]))
-        
-    # Load pretrained rl agent
-    env_args.logger.info("loading model parameters")
-    rl_agent.model.load_state_dict(torch.load(args.agent_path, map_location=device))
-    
-    # Initialize envrionment and workers
-    workers = [RolloutWorker.remote(env_args, test_inputs[i].tolist(), i) for i in range(env_args.num_browsers)]
-    env = Env(env_args, yt_model, rl_agent, workers, seed=0, id2video_map=ID2VIDEO, use_rand=args.use_rand)
-
-    # Start testing
-    env.rl_agent.eval()
-    test_results = {"base": {}, "obfu": {}}
-    user_count = 0
-    random.seed(0)
-    np.random.seed(0)
-    for ep in range(1):
-        for i in range(test_inputs.shape[0] // env_args.num_browsers):
-            for j in range(env_args.num_browsers):
-                env.workers[j].user_videos = test_inputs[i * env_args.num_browsers + j].tolist()
+            ray.get([env.workers[j].update_user_videos.remote(test_inputs[i * env_args.num_browsers + j].tolist()) for j in range(env_args.num_browsers)])
             # try:
             # One episode training
             env.start_env()
@@ -207,11 +243,13 @@ else:
             
             if i % 10 == 0:
                 env_args.logger.info(f"Test epoch: {ep}, episode: {i}, loss: {loss}, reward: {reward}")
-            rets = env.get_watch_history_from_workers()
-            for ret in rets:
-                test_results["base"][str(user_count)] = ret["base"]
-                test_results["obfu"][str(user_count)] = ret["obfu"]
+            env.get_watch_history_from_workers()
+            for j in range(len(env.all_watch_history_base)):
+                test_results["base"][str(user_count)] = [ID2VIDEO[str(video_id)] for video_id in env.all_watch_history_base[j]]
+                test_results["obfu"][str(user_count)] = [ID2VIDEO[str(video_id)] for video_id in env.all_watch_history[j]]
                 user_count += 1
+            all_watch_history = ray.get([worker.get_watch_history.remote() for worker in env.workers])
+            print(all_watch_history[0])
             env.stop_env(save_param=False)
             # except:
             #     continue

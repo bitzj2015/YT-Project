@@ -9,7 +9,7 @@ import logging
 # Define ray worker, each of which simulates one user.
 @ray.remote
 class RolloutWorker(object):
-    def __init__(self, env_args, user_videos, user_id):
+    def __init__(self, env_args, user_id):
         self.env_args = env_args
         self.pre_rewards = [0 for _ in range(self.env_args.reward_dim)]
         self.cur_rewards = [0 for _ in range(self.env_args.reward_dim)]
@@ -22,7 +22,7 @@ class RolloutWorker(object):
         self.global_rec = {}
         self.user_step = 0
         self.step = 0
-        self.user_videos = user_videos
+        self.user_videos = []
         self.user_id = user_id
         logging.basicConfig(
             filename=f"./logs/log_train_regression_{self.env_args.alpha}_{self.env_args.version}.txt",
@@ -32,8 +32,11 @@ class RolloutWorker(object):
             level=logging.INFO
         )
         self.logger=logging.getLogger() 
-        self.logger.setLevel(logging.INFO) 
-
+        self.logger.setLevel(logging.INFO)
+        
+    def update_user_videos(self, user_videos):
+        self.user_videos = user_videos
+        
     def initial_profile(self, initial_len=5):
         self.watch_history_base = self.user_videos[: initial_len]
         self.watch_history = self.user_videos[: initial_len]
