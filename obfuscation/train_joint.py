@@ -12,6 +12,7 @@ import argparse
 import h5py
 import json
 import logging
+import ray
 
 # Define arguments for training script
 parser = argparse.ArgumentParser(description='run regression.')

@@ -2,8 +2,8 @@ import sys
 sys.path.append('../surrogate_model')
 import torch
 import torch.optim as optim
-from env_rf import *
-from agent import *
+from env import *
+from agent_graph import *
 from config import *
 from constants import *
 from graph_encoder import GraphEncoder
@@ -12,6 +12,7 @@ import argparse
 import h5py
 import json
 import logging
+import ray
 
 # Define arguments for training script
 parser = argparse.ArgumentParser(description='run regression.')
