@@ -21,7 +21,7 @@ puppet = [
 ]
 
 # VERSION = "rl_reddit_new2"
-VERSION = "rl_final_new2_cate_test4"
+VERSION = "final_joint_cate_100_2_test"
 root_dir = f"./docker-volume/crawls_{VERSION}"
 for user_dir in sorted(tqdm(os.listdir(root_dir))):
     try:
@@ -31,7 +31,7 @@ for user_dir in sorted(tqdm(os.listdir(root_dir))):
                     data = json.load(json_file)
                 data["user_id"] = user_dir
                 puppet[2]["data"].append(data)
-                # print(len(data["viewed"]), user_dir)
+                print(len(data["viewed"]), user_dir)
     except:
         continue
 

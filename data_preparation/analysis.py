@@ -11,7 +11,7 @@ args = parser.parse_args()
 
 
 
-VERSION = "_reddit"
+VERSION = "_final"
 with open(f"../dataset/sock_puppets{VERSION}.json", "r") as json_file:
     data = json.load(json_file)[2]["data"]
 # Parse video trails
@@ -41,7 +41,7 @@ print(len(initial_home_video_ids))
 
 removed_videos = []
 for video in unique_home_video_id.keys():
-    if unique_home_video_id[video] > 0 and unique_home_video_id[video] < 1000:
+    if unique_home_video_id[video] > 0 and unique_home_video_id[video] < 2:
         removed_videos.append(video)
 for video in removed_videos:
     del unique_home_video_id[video]
@@ -74,6 +74,7 @@ for i in tqdm(range(len(data))):
                     tmp[video_id] = 1
                 else:
                     tmp[video_id] = 1
+        print(len(tmp))
         # Recommended videos
         rec_trails = data[i]["recommendation_trail"]
         for trail in rec_trails:

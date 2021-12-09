@@ -17,6 +17,8 @@ logger.setLevel(logging.INFO)
 
 VERSION = "_rl_final_new2_cate_test4"
 FILTER = ""
+VERSION = "_final"
+FILTER = "_filter"
 with open(f"../dataset/sock_puppets{VERSION}.json", "r") as json_file:
     data = json.load(json_file)[2]["data"]
 
@@ -92,7 +94,7 @@ for video in removed_videos:
 print(len(unique_home_video_id))
 
 # unique_home_video_id = {}
-
+tmp = {}
 for i in tqdm(range(len(data))):
     # try:
     input_data = []
@@ -100,6 +102,7 @@ for i in tqdm(range(len(data))):
 
     # Get video trails
     video_views = data[i]["viewed"]
+    tmp[str(video_views)] = 1
     for video_id in video_views:
         # if video_id in video_ids.keys():
         input_data.append(video_ids[video_id])
@@ -199,6 +202,7 @@ logger.info("Missing {} trails.".format(cnt))
 idx = [i for i in range(len(input_data_all))]
 np.random.seed(0)
 np.random.shuffle(idx)
+print(len(tmp))
 
 train_size = int(len(idx) * 0.8)
 input_data_all = np.stack(input_data_all)
