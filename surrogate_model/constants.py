@@ -1,7 +1,7 @@
 import json
 import numpy as np
 
-VERSION = "reddit"
+VERSION = "final"
 TAG = "_filter"
 with open(f"../dataset/home_video_id_sorted_{VERSION}{TAG}.json", "r") as json_file:
     data = json.load(json_file)

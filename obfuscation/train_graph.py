@@ -6,8 +6,10 @@ from env import *
 from agent_graph import *
 from config import *
 from constants import *
+from utils_cate import *
 from graph_encoder import GraphEncoder
 from graph_aggregator import GraphAggregator
+from policy_net_regression_cate import PolicyNetRegression
 import argparse
 import h5py
 import json
@@ -49,22 +51,68 @@ logger.info(f"Use cuda: {use_cuda}")
 # Load video embeddings
 with h5py.File(args.video_emb_path, "r") as hf_emb:
     video_embeddings = hf_emb["embeddings"][:].astype("float32")
-
-# Load yt surrogate model
-yt_model = torch.load(
-    args.ytmodel_path, 
-    map_location=device
-).to(device)
-
-
+video_embeddings = torch.from_numpy(video_embeddings)
 
 # Define environment configuration and rl agent
-env_args = EnvConfig(action_dim=video_embeddings.shape[0], device=device, agent_path=args.agent_path, alpha=args.alpha, logger=logger, version=args.version)
-video_embeddings = torch.from_numpy(video_embeddings)
+env_args = EnvConfig(action_dim=video_embeddings.shape[0], device=device, agent_path=args.agent_path, alpha=args.alpha, logger=logger, version=args.version, reward_dim=1)
+
+# Define GNN for yt
+yt_agg_video_graph = GraphAggregator(
+    video_embeddings=video_embeddings, 
+    emb_dim=env_args.emb_dim, 
+    add_edge=True,
+    device=device
+)
+yt_video_graph_embeddings = GraphEncoder(
+    video_embeddings=video_embeddings, 
+    emb_dim=env_args.emb_dim,  
+    video_graph_adj_mat=video_graph_adj_mat, 
+    aggregator=yt_agg_video_graph,
+    device=device
+)
+
+yt_model = PolicyNetRegression(
+    emb_dim=env_args.emb_dim,
+    hidden_dim=128,
+    graph_embeddings=yt_video_graph_embeddings,
+    video_embeddings=video_embeddings,
+    device=device,
+    topk=100,
+    use_rand=0,
+    num_user_state=100
+)
+
+yt_model.load_state_dict(torch.load(args.ytmodel_path, map_location=device).state_dict())
 yt_model.device = device
 yt_model.video_embeddings = video_embeddings.to(device)
 yt_model.graph_embeddings.device = device
 yt_model.graph_embeddings.aggregator.device = device
+
+# # Load yt surrogate model
+# yt_model = torch.load(
+#     args.ytmodel_path, 
+#     map_location=device
+# ).to(device)
+# yt_model.device = device
+# yt_model.video_embeddings = video_embeddings.to(device)
+# yt_model.graph_embeddings.device = device
+# yt_model.graph_embeddings.aggregator.device = device
+
+train_loader, test_loader, val_loader = load_dataset(
+    train_data_path=args.train_data_path,
+    test_data_path=args.test_data_path,
+    batch_size=64,
+    logger=logger
+)
+# State tracker
+stat = {
+    "train_last_acc": 0, "train_last_acc_ch": 0, "train_last_count": 0, "train_loss_pos": 0, "train_loss_neg": 0, 
+    "test_last_acc": 0, "test_last_acc_ch": 0, "test_last_count": 0, "test_loss_pos": 0, "test_loss_neg": 0
+}
+logger.info("load model")
+# Testing
+stat = run_regression_epoch(model=yt_model, dataloader=test_loader, mode="test", optimizer=None, ep=0, stat=stat, logger=logger, use_graph=True)
+
 
 # Define GNN 
 agg_video_graph = GraphAggregator(
@@ -82,7 +130,7 @@ video_graph_embeddings = GraphEncoder(
 )
 
 # Define rl model
-rl_model = A2Clstm(env_args, video_embeddings.to(env_args.device), video_graph_embeddings, with_graph=False).to(device)
+rl_model = A2Clstm(env_args, video_embeddings.to(env_args.device), video_graph_embeddings, with_graph=True).to(device)
 rl_optimizer = optim.Adam(rl_model.parameters(), lr=env_args.rl_lr)
 rl_agent = Agent(rl_model, rl_optimizer, env_args)
 
@@ -102,8 +150,8 @@ if not args.eval:
     env_args.logger.info("Testing data size: {}, No. of videos: {}.".format(test_inputs.shape, video_embeddings.shape[0]))
 
     # Initialize envrionment and workers
-    workers = [RolloutWorker.remote(env_args, train_inputs[i].tolist(), i) for i in range(env_args.num_browsers)]
-    env = Env(env_args, yt_model, rl_agent, workers, seed=0, id2video_map=ID2VIDEO)
+    workers = [RolloutWorker.remote(env_args, i) for i in range(env_args.num_browsers)]
+    env = Env(env_args, yt_model, rl_agent, workers, seed=0, id2video_map=ID2VIDEO, use_graph=True)
     
     # Start RL agent training loop
     losses = []
@@ -115,8 +163,7 @@ if not args.eval:
     for ep in range(50):
         env.rl_agent.train()
         for i in range(train_inputs.shape[0] // env_args.num_browsers):
-            for j in range(env_args.num_browsers):
-                env.workers[j].user_videos = train_inputs[i * env_args.num_browsers + j].tolist()
+            ray.get([env.workers[j].update_user_videos.remote(train_inputs[i * env_args.num_browsers + j].tolist()) for j in range(env_args.num_browsers)])
             # try:
             # One episode training
             env.start_env()
@@ -139,8 +186,7 @@ if not args.eval:
         # Start testing
         env.rl_agent.eval()
         for i in range(test_inputs.shape[0] // env_args.num_browsers):
-            for j in range(env_args.num_browsers):
-                env.workers[j].user_videos = test_inputs[i * env_args.num_browsers + j].tolist()
+            ray.get([env.workers[j].update_user_videos.remote(test_inputs[i * env_args.num_browsers + j].tolist()) for j in range(env_args.num_browsers)])
             # try:
             # One episode training
             env.start_env()
@@ -169,7 +215,7 @@ else:
     rl_agent.model.load_state_dict(torch.load(args.agent_path, map_location=device))
     
     # Initialize envrionment and workers
-    workers = [RolloutWorker.remote(env_args, test_inputs[i].tolist(), i) for i in range(env_args.num_browsers)]
+    workers = [RolloutWorker.remote(env_args, i) for i in range(env_args.num_browsers)]
     env = Env(env_args, yt_model, rl_agent, workers, seed=0, id2video_map=ID2VIDEO, use_rand=args.use_rand)
 
     # Start testing
@@ -180,8 +226,7 @@ else:
     np.random.seed(0)
     for ep in range(1):
         for i in range(test_inputs.shape[0] // env_args.num_browsers):
-            for j in range(env_args.num_browsers):
-                env.workers[j].user_videos = test_inputs[i * env_args.num_browsers + j].tolist()
+            ray.get([env.workers[j].update_user_videos.remote(test_inputs[i * env_args.num_browsers + j].tolist()) for j in range(env_args.num_browsers)])
             # try:
             # One episode training
             env.start_env()

@@ -109,6 +109,7 @@ class Agent(object):
         if len(self.rewards) == 0:
             return 0, 0
         for i in reversed(range(len(self.rewards))):
+            
             avg_R += self.rewards[i]
             R = GAMMA * R + self.rewards[i]
             advantage = R - self.values[i]
@@ -122,7 +123,7 @@ class Agent(object):
         self.optimizer.zero_grad()
 
         loss = policy_loss.sum() + 0.5 * value_loss.sum(0)
-        print("loss: {}, {}; reward: {}".format(policy_loss.sum().item(), value_loss.sum(0).item(), self.rewards))
+        print("loss: {}, {}".format(policy_loss.sum().item(), value_loss.sum(0).item()))
         loss.backward(retain_graph=True)
         torch.nn.utils.clip_grad_norm(self.model.parameters(), 100)
         self.optimizer.step()

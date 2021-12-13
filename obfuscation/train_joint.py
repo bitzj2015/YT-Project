@@ -197,7 +197,7 @@ else:
     # Initialize envrionment and workers
     workers = [RolloutWorker.remote(env_args, i) for i in range(env_args.num_browsers)]
     env = Env(env_args, yt_model, denoiser, rl_agent, workers, seed=0, id2video_map=ID2VIDEO, use_rand=args.use_rand)
-    env.denoiser.denoiser_model.load_state_dict(torch.load(args.denoiser_path, map_location=device))
+    # env.denoiser.denoiser_model.load_state_dict(torch.load(args.denoiser_path, map_location=device))
 
     # Start testing
     env.rl_agent.eval()

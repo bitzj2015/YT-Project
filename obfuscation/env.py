@@ -9,7 +9,7 @@ from worker import *
 
 # Define the environment for training RL agent
 class Env(object):
-    def __init__(self, env_args, yt_model, rl_agent, workers, seed=0, id2video_map=None, use_rand=0):
+    def __init__(self, env_args, yt_model, rl_agent, workers, seed=0, id2video_map=None, use_rand=0, use_graph=False):
         self.env_args = env_args
         self.all_rewards = []
         self.all_reward_gains = []
@@ -22,6 +22,7 @@ class Env(object):
         self.id2video_map = id2video_map
         self.use_rand = use_rand
         self.bias_weight = []
+        self.use_graph = use_graph
         self.video_set = [i for i in range(self.env_args.action_dim)]
         if self.use_rand == 2:
             self.bias_weight = [1 / self.env_args.action_dim for _ in range(self.env_args.action_dim)]
@@ -51,14 +52,13 @@ class Env(object):
     
     def get_reward_gain_from_workers(self):
         self.all_reward_gains = ray.get([worker.get_reward_gain.remote() for worker in self.workers])
-        # print(self.all_reward_gains)
         return np.array(self.all_reward_gains).reshape(-1)
 
     def send_reward_to_workers(self):
         self.state = self.get_state_from_workers()
         self.base_state = self.get_base_state_from_workers()
-        cur_cate = self.yt_model.get_rec(torch.from_numpy(self.state).to(self.env_args.device), topk=100)
-        cur_cate_base = self.yt_model.get_rec(torch.from_numpy(self.base_state).to(self.env_args.device), topk=100)
+        cur_cate = self.yt_model.get_rec(torch.from_numpy(self.state).to(self.env_args.device), topk=100, with_graph=self.use_graph)
+        cur_cate_base = self.yt_model.get_rec(torch.from_numpy(self.base_state).to(self.env_args.device), topk=100, with_graph=self.use_graph)
         cur_reward = [kl_divergence(cur_cate_base[i], cur_cate[i]) for i in range(len(self.workers))]
         self.env_args.logger.info("KL distance between embeddings: {}, {}, {}".format(np.mean(cur_reward), len(cur_reward), cur_cate.shape))
         ray.get([self.workers[i].update_reward.remote(cur_reward[i]) for i in range(len(self.workers))])
