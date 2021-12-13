@@ -11,7 +11,7 @@ import ray
 
 emb_model = SentenceTransformer('all-MiniLM-L6-v2')
 
-VERSION = "rl_final_new2_cate_test4"
+VERSION = "final_joint_cate_100_2_test"
 TYPE = ""
 MAX_LEN = 256
 
