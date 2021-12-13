@@ -31,7 +31,6 @@ for user_dir in sorted(tqdm(os.listdir(root_dir))):
                     data = json.load(json_file)
                 data["user_id"] = user_dir
                 puppet[2]["data"].append(data)
-                print(len(data["viewed"]), user_dir)
     except:
         continue
 

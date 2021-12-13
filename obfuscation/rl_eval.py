@@ -8,8 +8,6 @@ VERSION = "final_joint_cate_100_2_test"
 PHASE = 0
 with open(f"../dataset/category_ids_new.json", "r") as json_file:
     CATE_IDS = json.load(json_file)
-del CATE_IDS[""]
-del CATE_IDS["none"]
 
 with open(f"../dataset/sock_puppets_{VERSION}.json", "r") as json_file:
     data = json.load(json_file)[2]["data"]
@@ -78,7 +76,7 @@ if PHASE == 0:
     removed_videos = []
     print(len(filtered_video_ids))
     for video in unique_home_video_id.keys():
-        if unique_home_video_id[video] > 0 and unique_home_video_id[video] <= 40:
+        if unique_home_video_id[video] > 0 and unique_home_video_id[video] <= 60:
             removed_videos.append(video)
     for video in removed_videos:
         del unique_home_video_id[video]
@@ -133,7 +131,7 @@ if PHASE == 0:
 
             delta_len = len(data[f"rl_obfu_{i}"]["viewed"]) - len(data[f"rl_base_{i}"]["viewed"])
 
-            if delta_len > 6:
+            if delta_len > 0:
                 rl_avg_kl += kl_divergence(rl_base_cate, rl_obfu_cate)
                 rand_avg_kl += kl_divergence(rand_base_cate, rand_obfu_cate)
                 base_avg_kl += kl_divergence(rand_base_cate, rl_base_cate)
@@ -182,7 +180,7 @@ if PHASE == 0:
             miss_cnt += 1
             continue
 
-    print(miss_cnt)
+    print(miss_cnt, cnt)
     print(base_avg_kl / cnt, base_avg_l2 / cnt, base_avg_dist / cnt)
     print(rand_avg_kl / cnt, rand_avg_l2 / cnt, rand_avg_dist / cnt)
     print(rl_avg_kl / cnt, rl_avg_l2 / cnt, rl_avg_dist / cnt)

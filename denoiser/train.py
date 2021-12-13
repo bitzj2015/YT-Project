@@ -59,4 +59,8 @@ denoiser_model = DenoiserNet(emb_dim=video_embeddings.shape[1], hidden_dim=256, 
 denoiser_optimizer = optim.Adam(denoiser_model.parameters(), lr=0.001)
 denoiser = Denoiser(denoiser_model=denoiser_model, optimizer=denoiser_optimizer, logger=logger)
 
-denoiser.train(train_dataloader)
+for ep in range(30):
+    logger.info(f"Training epoch: {ep}")
+    denoiser.train(train_dataloader)
+logger.info(f"Testing:")
+denoiser.test(train_dataloader)
