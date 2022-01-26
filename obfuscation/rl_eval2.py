@@ -3,10 +3,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
 
-VERSION = "final_joint_cate_100_2_test"
-VERSION = "final_joint_cate_100_2_0.1"
-# VERSION = "reddit_cate_100_2_test"
-
+VERSION = "final_with_graph"
 PHASE = 0
 with open(f"../dataset/category_ids_new.json", "r") as json_file:
     CATE_IDS = json.load(json_file)
@@ -35,11 +32,9 @@ def get_cate_dist(data, filtered_video_ids):
             if video_id not in data_home_video_ids.keys():
                 data_home_video_ids[video_id] = 0
             data_home_video_ids[video_id] += 1
-                
             
     data_home_video_ids = {k : v for k, v in sorted(data_home_video_ids.items(), key=lambda item: item[1], reverse=True)[0:100]}
     data_home_video_ids_list = list(data_home_video_ids.keys())
-
 
     for video_id in data_home_video_ids_list:
         if "categories" in VIDEO_METADATA[video_id].keys():
@@ -47,14 +42,13 @@ def get_cate_dist(data, filtered_video_ids):
                 data_cate[CATE_IDS[VIDEO_METADATA[video_id]["categories"]]] += 1
             except:
                 continue
-
+            
     data_cate = [data_cate[i] / sum(data_cate) for i in range(len(data_cate))]
     return data_cate, data_home_video_ids
 
 
 if PHASE == 0:
 
-    print(len(data))
     filtered_video_ids = {}
     unique_home_video_id = {}
 
@@ -80,7 +74,7 @@ if PHASE == 0:
     removed_videos = []
     print(len(filtered_video_ids))
     for video in unique_home_video_id.keys():
-        if unique_home_video_id[video] > 0 and unique_home_video_id[video] <= 50:
+        if unique_home_video_id[video] > 0 and unique_home_video_id[video] <= 60:
             removed_videos.append(video)
     for video in removed_videos:
         del unique_home_video_id[video]
@@ -118,22 +112,22 @@ if PHASE == 0:
     for i in tqdm(range(N)):
         try:
 
-            rl_base_cate, rl_base_home_video_ids = get_cate_dist(data[f"rl_base_{i}"]["homepage"], filtered_video_ids)
-            rl_obfu_cate, rl_obfu_home_video_ids = get_cate_dist(data[f"rl_obfu_{str(i)}"]["homepage"], filtered_video_ids)
-            rand_base_cate, rand_base_home_video_ids = get_cate_dist(data[f"rand_base_{i}"]["homepage"], filtered_video_ids)
-            rand_obfu_cate, rand_obfu_home_video_ids = get_cate_dist(data[f"rand_obfu_{i}"]["homepage"], filtered_video_ids)
+            rl_base_cate, rl_base_home_video_ids = get_cate_dist(data[f"rl_graph_base_{i}"]["homepage"], filtered_video_ids)
+            rl_obfu_cate, rl_obfu_home_video_ids = get_cate_dist(data[f"rl_graph_obfu_{i}"]["homepage"], filtered_video_ids)
+            rand_base_cate, rand_base_home_video_ids = get_cate_dist(data[f"rl_graph2_base_{i}"]["homepage"], filtered_video_ids)
+            rand_obfu_cate, rand_obfu_home_video_ids = get_cate_dist(data[f"rl_graph2_obfu_{i}"]["homepage"], filtered_video_ids)
 
-            save_data[f"rl_base_{i}"] = data[f"rl_base_{i}"]
-            save_data[f"rl_obfu_{i}"] = data[f"rl_obfu_{i}"]
-            save_data[f"rand_base_{i}"] = data[f"rand_base_{i}"]
-            save_data[f"rand_obfu_{i}"] = data[f"rand_obfu_{i}"]
+            save_data[f"rl_graph_base_{i}"] = data[f"rl_graph_base_{i}"]
+            save_data[f"rl_graph_obfu_{i}"] = data[f"rl_graph_obfu_{i}"]
+            save_data[f"rl_graph2_base_{i}"] = data[f"rl_graph2_base_{i}"]
+            save_data[f"rl_graph2_obfu_{i}"] = data[f"rl_graph2_obfu_{i}"]
 
-            save_data[f"rl_base_{i}"]["cate_dist"] = rl_base_cate
-            save_data[f"rl_obfu_{i}"]["cate_dist"] = rl_obfu_cate
-            save_data[f"rand_base_{i}"]["cate_dist"] = rand_base_cate
-            save_data[f"rand_obfu_{i}"]["cate_dist"] = rand_obfu_cate
+            save_data[f"rl_graph_base_{i}"]["cate_dist"] = rl_base_cate
+            save_data[f"rl_graph_obfu_{i}"]["cate_dist"] = rl_obfu_cate
+            save_data[f"rl_graph2_base_{i}"]["cate_dist"] = rand_base_cate
+            save_data[f"rl_graph2_obfu_{i}"]["cate_dist"] = rand_obfu_cate
 
-            delta_len = len(data[f"rl_obfu_{i}"]["viewed"]) - len(data[f"rl_base_{i}"]["viewed"])
+            delta_len = len(data[f"rl_graph_obfu_{i}"]["viewed"]) - len(data[f"rl_graph_base_{i}"]["viewed"])
 
             if delta_len > 0:
                 rl_avg_kl += kl_divergence(rl_base_cate, rl_obfu_cate)
@@ -156,7 +150,7 @@ if PHASE == 0:
                 for video in rl_obfu_home_video_ids.keys():
                     if video not in rl_base_home_video_ids.keys():
                         added += 1
-                rl_avg_dist += (removed + added) / len(rl_base_home_video_ids)
+                rl_avg_dist += (removed + added)
 
                 removed = 0
                 added = 0
@@ -167,7 +161,7 @@ if PHASE == 0:
                 for video in rand_obfu_home_video_ids.keys():
                     if video not in rand_base_home_video_ids.keys():
                         added += 1
-                rand_avg_dist += (removed + added) / len(rand_base_home_video_ids)
+                rand_avg_dist += (removed + added)
 
                 removed = 0
                 added = 0
@@ -178,16 +172,16 @@ if PHASE == 0:
                 for video in rl_base_home_video_ids.keys():
                     if video not in rand_base_home_video_ids.keys():
                         added += 1
-                base_avg_dist += (removed + added) / len(rand_base_home_video_ids)
+                base_avg_dist += (removed + added)
 
         except:
             miss_cnt += 1
             continue
 
     print(miss_cnt, cnt)
-    print("[base] KL: {}, L2: {}, Videos: {}".format(base_avg_kl / cnt, base_avg_l2 / cnt, base_avg_dist / cnt))
-    print("[rand] KL: {}, L2: {}, Videos: {}".format(rand_avg_kl / cnt, rand_avg_l2 / cnt, rand_avg_dist / cnt))
-    print("[rl] KL: {}, L2: {}, Videos: {}".format(rl_avg_kl / cnt, rl_avg_l2 / cnt, rl_avg_dist / cnt))
+    print(base_avg_kl / cnt, base_avg_l2 / cnt, base_avg_dist / cnt)
+    print(rand_avg_kl / cnt, rand_avg_l2 / cnt, rand_avg_dist / cnt)
+    print(rl_avg_kl / cnt, rl_avg_l2 / cnt, rl_avg_dist / cnt)
 
     with open(f"./figs/{VERSION}_metadata.json","w") as json_file:
         json.dump(cate_dist, json_file)

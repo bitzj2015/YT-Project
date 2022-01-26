@@ -3,7 +3,7 @@ import numpy as np
 import h5py
 from tqdm import tqdm
 
-VERSION = "_final_joint_cate_100_2_test"
+VERSION = "_final_joint_cate_100_2_0.1"
 LOAD_METADATA = True
 
 with open(f"../dataset/video_metadata{VERSION}.json", "r") as json_file:

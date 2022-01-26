@@ -17,7 +17,7 @@ logger.setLevel(logging.INFO)
 
 VERSION = "_rl_final_new2_cate_test4"
 FILTER = ""
-VERSION = "_final"
+VERSION = "_reddit"
 FILTER = "_filter"
 with open(f"../dataset/sock_puppets{VERSION}.json", "r") as json_file:
     data = json.load(json_file)[2]["data"]

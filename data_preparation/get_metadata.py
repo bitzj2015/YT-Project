@@ -7,7 +7,10 @@ import logging
 import argparse
 
 # VERSION = "rl_reddit_new2"
-VERSION = "final_joint_cate_100_2_test"
+# VERSION = "final_joint_cate_100_2_test"
+VERSION = "final_with_graph"
+VERSION = "final_joint_cate_100_2_0.1"
+# VERSION = "reddit_cate_100_2_test"
 parser = argparse.ArgumentParser(description='get metadata.')
 parser.add_argument('--log', type=str, dest="log_path", help='log path', default=f"./logs/log_metadata_{VERSION}.txt")
 parser.add_argument('--data', type=str, dest="sock_puppet_path", help='sock puppet path', default=f"../dataset/sock_puppets_{VERSION}.json")

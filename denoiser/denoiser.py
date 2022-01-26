@@ -9,7 +9,7 @@ def kl_divergence(p, q):
 	return sum(p[i] * np.log2(p[i]/q[i]) for i in range(len(p)))
 
 class DenoiserNet(torch.nn.Module):
-    def __init__(self, emb_dim, hidden_dim, video_embeddings, device="cpu"):
+    def __init__(self, emb_dim, hidden_dim, video_embeddings, device="cpu", base=False):
         super(DenoiserNet,self).__init__()
         # gpu/cpu
         self.device = device
@@ -46,6 +46,7 @@ class DenoiserNet(torch.nn.Module):
         self.emb_dim = emb_dim
         self.tanh = nn.Tanh().to(self.device)
         self.relu = nn.ReLU().to(self.device)
+        self.base = base
         self.train()
 
     def get_rec(self, input_vu, input_vo, label_ro, with_graph=False):
@@ -91,10 +92,13 @@ class DenoiserNet(torch.nn.Module):
         encoded_ro = self.relu(self.linear_ro(label_ro))
 
         # Predict non-obfuscated recommended video distribution
-        decoded_ru = self.linear_ru(torch.cat([encoded_vu[:, -1], encoded_vo[:, -1], encoded_ro], axis=-1))
+        if self.base:
+            decoded_ru = self.linear_ru(torch.cat([encoded_vu[:, -1] * 0, encoded_vo[:, -1] * 0, encoded_ro * 1], axis=-1))
+        else:
+            decoded_ru = self.linear_ru(torch.cat([encoded_vu[:, -1], encoded_vo[:, -1], encoded_ro], axis=-1))
 
         logits = F.log_softmax(decoded_ru, -1)
-        print("logits: ", logits.size(), label_ru.size())
+        # print("logits: ", logits.size(), label_ru.size())
         
         # Get softmax and logits
         logits = label_ru * logits
@@ -174,6 +178,7 @@ class Denoiser(object):
             loss = loss.mean(0)
             loss_all += loss.item()
             kl_div_all += kl_div
+        self.logger.info(f"End, loss: {loss_all / (i+1)}, kl_div: {kl_div_all / (i+1)}")
 
         return loss_all / (i+1), kl_div_all / (i+1)
 

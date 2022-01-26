@@ -65,7 +65,7 @@ class YTDriver:
             if max_trial == 0:
                 try:
                     self.__log('clicking yt icon')
-                    self.driver.find_element_by_id('logo-icon').click()
+                    self.driver.find_element_by_id('logo').click()
                 except:
                     self.__log('getting via url')
                     self.driver.get('https://www.youtube.com')

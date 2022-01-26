@@ -12,6 +12,10 @@ import ray
 emb_model = SentenceTransformer('all-MiniLM-L6-v2')
 
 VERSION = "final_joint_cate_100_2_test"
+VERSION = "final_with_graph"
+VERSION = "final_joint_cate_100_2_0.1"
+# VERSION = "reddit_cate_100_2_test"
+
 TYPE = ""
 MAX_LEN = 256
 

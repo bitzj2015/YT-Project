@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 def filter_trans(video_id: str, file_path: str, output_path: str):
     lines = []
     res = []
-    with open(file_path, "r") as text_file:
+    with open(file_path, "r",encoding="ISO-8859-1") as text_file:
         for line in text_file.readlines():
             if line.endswith("</c>\n"):
                 lines.append(line)

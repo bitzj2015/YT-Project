@@ -21,7 +21,10 @@ puppet = [
 ]
 
 # VERSION = "rl_reddit_new2"
-VERSION = "final_joint_cate_100_2_test"
+# VERSION = "final_joint_cate_100_2_test"
+# VERSION = "final_with_graph"
+VERSION = "final_joint_cate_100_2_0.1"
+# VERSION = "reddit_cate_100_2_test"
 root_dir = f"./docker-volume/crawls_{VERSION}"
 for user_dir in sorted(tqdm(os.listdir(root_dir))):
     try:
