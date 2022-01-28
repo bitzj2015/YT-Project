@@ -12,7 +12,7 @@ parser.add_argument('--version', dest="version", type=str, default="base3")
 parser.add_argument('--use-base', dest="use_base", default=False, action='store_true')
 args = parser.parse_args()
 
-tag = "final_joint_cate_100_2_0.1"
+tag = "final_joint_cate_100_2_test"
 
 with open(f"../obfuscation/figs/dataset_{tag}.json", "r") as json_file:
     data = json.load(json_file)
@@ -43,19 +43,21 @@ obfu_rec = []
 
 for i in range(1500):
     try:
-        base_persona.append([video_ids[video] for video in data[f"rl_base_{i}"]["viewed"]][0:40])
+        base_persona.append([video_ids[video] for video in data[f"rl_base_{i}"]["viewed"]][0:30])
         base_rec.append(data[f"rl_base_{i}"]["cate_dist"])
 
-        obfu_persona.append([video_ids[video] for video in data[f"rl_obfu_{i}"]["viewed"]][0:40])
+        obfu_persona.append([video_ids[video] for video in data[f"rl_obfu_{i}"]["viewed"]][0:30])
         obfu_rec.append(data[f"rl_obfu_{i}"]["cate_dist"])
+        # print(len(data[f"rl_base_{i}"]["viewed"]), len(data[f"rl_obfu_{i}"]["viewed"]))
 
-        # base_persona.append([video_ids[video] for video in data[f"rand_base_{i}"]["viewed"]][0:40])
+        # base_persona.append([video_ids[video] for video in data[f"rand_base_{i}"]["viewed"]][0:30])
         # base_rec.append(data[f"rand_base_{i}"]["cate_dist"])
 
-        # obfu_persona.append([video_ids[video] for video in data[f"rand_obfu_{i}"]["viewed"]][0:40])
+        # obfu_persona.append([video_ids[video] for video in data[f"rand_obfu_{i}"]["viewed"]][0:30])
         # obfu_rec.append(data[f"rand_obfu_{i}"]["cate_dist"])
     except:
         continue
+
 
 train_dataloader, test_dataloader = get_stealthy_dataset(base_persona, obfu_persona, batch_size=50, max_len=50)
 
@@ -68,13 +70,13 @@ stealthy_model = StealthyNet(emb_dim=video_embeddings.shape[1], hidden_dim=256, 
 stealthy_optimizer = optim.Adam(stealthy_model.parameters(), lr=0.001)
 stealthy = Stealthy(stealthy_model=stealthy_model, optimizer=stealthy_optimizer, logger=logger)
 
-best_kl = 10
+best_kl = 0
 for ep in range(30):
     logger.info(f"Training epoch: {ep}")
     stealthy.train(train_dataloader)
     logger.info(f"Testing epoch: {ep}")
     _, kl = stealthy.eval(test_dataloader)
-    if kl < best_kl:
+    if kl > best_kl:
         best_kl = kl
         torch.save(stealthy.stealthy_model, f"./param/stealthy_{args.version}.pkl")
 print(best_kl)

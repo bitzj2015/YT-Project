@@ -135,4 +135,3 @@ def get_stealthy_dataset(base_persona, obfu_persona, batch_size=50, max_len=50):
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     return train_loader, test_loader
-            

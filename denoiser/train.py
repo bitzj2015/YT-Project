@@ -73,7 +73,7 @@ for ep in range(30):
     logger.info(f"Training epoch: {ep}")
     denoiser.train(train_dataloader)
     logger.info(f"Testing epoch: {ep}")
-    _, kl = denoiser.eval(train_dataloader)
+    _, kl = denoiser.eval(test_dataloader)
     if kl < best_kl:
         best_kl = kl
         torch.save(denoiser.denoiser_model, f"./param/denoiser_{args.version}.pkl")
