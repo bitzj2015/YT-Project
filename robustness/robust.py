@@ -68,7 +68,7 @@ class RobustNet(torch.nn.Module):
             for j in range(len(mask[i])):
                 avg_acc[0] += (np.argmax(label[i][j]) == np.argmax(pred_label[i][j]))
                 count[0] += 1
-                if pred_label[i][j][1] == 1:
+                if pred_label[i][j][1] > 0.5:
                     # positive
                     if label[i][j][1] == 1:
                         # true positive in predicted positive 
@@ -76,10 +76,10 @@ class RobustNet(torch.nn.Module):
                     count[1] += 1
                 if label[i][j][1] == 1:
                     # true positive in dataset
-                    if pred_label[i][j][1] == 1:
+                    if pred_label[i][j][1] > 0.5:
                         avg_acc[2] += 1
                     count[2] += 1
-        avg_acc = [avg_acc[i] / count[i] for i in range(3)]
+        avg_acc = [avg_acc[i] / (count[i] + 0.0001) for i in range(3)]
             
         return -logits, avg_acc[0], avg_acc[1], avg_acc[2]
 
@@ -150,8 +150,9 @@ class Robust(object):
             avg_acc_1_all += avg_acc_1
         self.logger.info(f"End, loss: {loss_all / (i+1)}, avg_acc: {avg_acc_all / (i+1)}, "
                          f"avg_acc_0: {avg_acc_0_all / (i+1)}, avg_acc_1: {avg_acc_1_all / (i+1)}")
-
-        return loss_all / (i+1), avg_acc_all / (i+1)
+        precision = avg_acc_0_all / (i+1)
+        recall = avg_acc_1_all / (i+1)
+        return loss_all / (i+1), avg_acc_all / (i+1),  precision * recall / (precision + recall + 0.0001) * 2
 
 def get_robust_dataset(obfu_persona, obfu_rec, batch_size=50, max_len=50):
     train_size = int(len(obfu_persona) * 0.8)

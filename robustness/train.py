@@ -38,7 +38,7 @@ logger.setLevel(logging.INFO)
 
 obfu_persona = []
 obfu_rec = []
-method = "rand"
+method = "rl"
 
 for i in range(1500):
     try:
@@ -69,13 +69,15 @@ robust_model = RobustNet(emb_dim=video_embeddings.shape[1], hidden_dim=256, vide
 robust_optimizer = optim.Adam(robust_model.parameters(), lr=0.001)
 robust = Robust(robust_model=robust_model, optimizer=robust_optimizer, logger=logger)
 
-best_kl = 0
+best_metric = 0
+best_ep = 0
 for ep in range(30):
     logger.info(f"Training epoch: {ep}")
     robust.train(train_dataloader)
     logger.info(f"Testing epoch: {ep}")
-    _, kl = robust.eval(test_dataloader)
-    if kl > best_kl:
-        best_kl = kl
+    _, _, f1= robust.eval(test_dataloader)
+    if f1 > best_metric:
+        best_metric = f1
+        best_ep = ep
         torch.save(robust.robust_model, f"./param/robust_{args.version}.pkl")
-print(best_kl)
+print(best_metric, ep)
