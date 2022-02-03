@@ -68,11 +68,16 @@ class RobustNet(torch.nn.Module):
             for j in range(len(mask[i])):
                 avg_acc[0] += (np.argmax(label[i][j]) == np.argmax(pred_label[i][j]))
                 count[0] += 1
-                if label[i][j][0] == 1:
-                    avg_acc[1] += (np.argmax(label[i][j]) == np.argmax(pred_label[i][j]))
+                if pred_label[i][j][1] == 1:
+                    # positive
+                    if label[i][j][1] == 1:
+                        # true positive in predicted positive 
+                        avg_acc[1] += 1
                     count[1] += 1
-                else:
-                    avg_acc[2] += (np.argmax(label[i][j]) == np.argmax(pred_label[i][j]))
+                if label[i][j][1] == 1:
+                    # true positive in dataset
+                    if pred_label[i][j][1] == 1:
+                        avg_acc[2] += 1
                     count[2] += 1
         avg_acc = [avg_acc[i] / count[i] for i in range(3)]
             
