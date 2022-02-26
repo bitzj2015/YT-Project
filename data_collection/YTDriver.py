@@ -139,7 +139,7 @@ class YTDriver:
             self.logger.info(message)
 
     def __click_video(self, video):
-        self.tab_restart_browser()
+        # self.tab_restart_browser()
         if type(video) == Video:
             self.__log(f"Start watching video {video.videoId}...")
             try:
@@ -167,19 +167,17 @@ class YTDriver:
 
         elif type(video) == str:
             self.__log(f"Start watching video {video}...")
-            # if video.startswith('https://www.youtube.com/watch?'):
-            #     self.driver.get(video)
-            # else:
-            #     self.driver.get(f"https://www.youtube.com/watch?v={video}")
             self.driver.get(f"https://www.youtube.com/results?search_query={video}")
             try:
+                # elems = WebDriverWait(self.driver, 15).until(
+                #     EC.presence_of_all_elements_located((By.TAG_NAME, 'ytd-video-renderer'))
+                # )
                 elems = WebDriverWait(self.driver, 15).until(
-                    EC.presence_of_all_elements_located((By.TAG_NAME, 'ytd-video-renderer'))
+                    EC.presence_of_all_elements_located((By.XPATH, "//yt-formatted-string[@class='style-scope ytd-video-renderer']"))
                 )
+                print(elems)
                 elem = elems[0]
-                video_id_found = elem.find_elements_by_tag_name('a')[0].get_attribute('href')
                 elem.click()
-                self.__log(f"Found video {video_id_found}")
                 return True
             except:
                 self.__log(f"Video {video} is not found...")

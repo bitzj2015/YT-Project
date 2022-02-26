@@ -14,6 +14,7 @@ emb_model = SentenceTransformer('all-MiniLM-L6-v2')
 VERSION = "final_joint_cate_100_2_test"
 VERSION = "final_with_graph"
 VERSION = "final_joint_cate_100_2_0.1"
+VERSION = "final_joint_cate_103_2_test"
 # VERSION = "reddit_cate_100_2_test"
 
 TYPE = ""

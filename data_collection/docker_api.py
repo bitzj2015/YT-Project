@@ -52,7 +52,7 @@ class docker_api(object):
         return 1 
 
 
-def run_docker(seed_videos, N=30, dump_root="/home/user/Desktop/crawls", real_root="$PWD/docker-volume/crawls_new_30", timeout=28, image="ytdriver:latest", shm_size="512m", logger=None):
+def run_docker(seed_videos, N=40, dump_root="/home/user/Desktop/crawls", real_root="$PWD/docker-volume/crawls_40", timeout=35, image="ytdriver:latest", shm_size="512m", logger=None):
     d_api = []
     for user_key in seed_videos:
         seed_video = seed_videos[user_key]
@@ -80,11 +80,11 @@ if __name__ == "__main__":
     count = 0
     batch = []
     seed_videos = {}
-    for i in range(10000-3050):
+    for i in range(10000):
         seed_id = videos.sample(1).iloc[0]
-        seed_videos[f"user_{i+3050}"] = seed_id
+        seed_videos[f"user_{i}"] = seed_id
         count += 1
-        if count % 100 == 0:
+        if count % 150 == 0:
             batch.append(seed_videos)
             seed_videos = {}
         

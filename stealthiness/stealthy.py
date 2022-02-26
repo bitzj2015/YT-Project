@@ -36,7 +36,7 @@ class StealthyNet(torch.nn.Module):
         self.base = base
         self.train()
 
-    def forward(self, input, label, with_graph=False):
+    def forward(self, input, label, with_graph=False, eval=False):
         # Get embeddings for non-obfuscated videos
         batch_size, seq_len = input.shape
         input = self.video_embeddings[input.reshape(-1).tolist()].reshape(batch_size, seq_len, self.emb_dim)
@@ -61,13 +61,34 @@ class StealthyNet(torch.nn.Module):
         label = label.tolist()
         pred_label = pred_label.tolist()
         
-        avg_kl_distance = 0
+        avg_acc = 0
         for i in range(batch_size):
-            avg_kl_distance += (np.argmax(label[i]) == np.argmax(pred_label[i]))
-        avg_kl_distance /= batch_size
+            avg_acc += (np.argmax(label[i]) == np.argmax(pred_label[i]))
+        avg_acc /= batch_size
             
-        return -logits, avg_kl_distance
+        # return -logits, avg_acc
+        avg_acc = [0, 0 ,0]
+        count = [0, 0, 0]
+        for i in range(batch_size):
+            avg_acc[0] += (np.argmax(label[i]) == np.argmax(pred_label[i]))
+            count[0] += 1
+            if pred_label[i][1] >= 0.5:
+                # positive
+                if label[i][1] == 1:
+                    # true positive in predicted positive 
+                    avg_acc[1] += 1
+                count[1] += 1
+            if label[i][1] == 1:
+                # true positive in dataset
+                if pred_label[i][1] >= 0.5:
+                    avg_acc[2] += 1
+                count[2] += 1
 
+        avg_acc = [avg_acc[i] / (count[i] + 0.0001) for i in range(3)]
+        # if not eval:
+        #     print(avg_acc, count)
+
+        return -logits, avg_acc[0], avg_acc[1], avg_acc[2]
 
 class StealthyDataset(Dataset):
     def __init__(self, base_persona, obfu_persona, max_len=50):
@@ -97,33 +118,41 @@ class Stealthy(object):
 
     def train(self, train_dataloader):
         self.stealthy_model.train()
-        loss_all, kl_div_all = 0, 0
+        loss_all, avg_acc_all, avg_acc_0_all, avg_acc_1_all = 0, 0, 0, 0
         for i, batch in enumerate(train_dataloader):
             input, label = batch["input"], batch["label"]
-            loss, kl_div = self.stealthy_model(input, label)
+            loss, avg_acc, avg_acc_0, avg_acc_1 = self.stealthy_model(input, label)
             loss = loss.mean(0)
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
             loss_all += loss.item()
-            kl_div_all += kl_div
+            avg_acc_all += avg_acc
+            avg_acc_0_all += avg_acc_0
+            avg_acc_1_all += avg_acc_1
             if i % 10 == 0:
-                self.logger.info(f"Step: {i}, loss: {loss_all / (i+1)}, kl_div: {kl_div_all / (i+1)}")
+                self.logger.info(f"End, loss: {loss_all / (i+1)}, avg_acc: {avg_acc_all / (i+1)}, "
+                                 f"avg_acc_0: {avg_acc_0_all / (i+1)}, avg_acc_1: {avg_acc_1_all / (i+1)}")
 
-        return loss_all / (i+1), kl_div_all / (i+1)
+        return loss_all / (i+1), avg_acc_all / (i+1)
 
     def eval(self, eval_dataloader):
         self.stealthy_model.eval()
-        loss_all, kl_div_all = 0, 0
+        loss_all, avg_acc_all, avg_acc_0_all, avg_acc_1_all = 0, 0, 0, 0
         for i, batch in enumerate(eval_dataloader):
             input, label = batch["input"], batch["label"]
-            loss, kl_div = self.stealthy_model(input, label)
+            loss, avg_acc, avg_acc_0, avg_acc_1 = self.stealthy_model(input, label, eval=True)
             loss = loss.mean(0)
             loss_all += loss.item()
-            kl_div_all += kl_div
-        self.logger.info(f"End, loss: {loss_all / (i+1)}, kl_div: {kl_div_all / (i+1)}")
+            avg_acc_all += avg_acc
+            avg_acc_0_all += avg_acc_0
+            avg_acc_1_all += avg_acc_1
+        self.logger.info(f"End, loss: {loss_all / (i+1)}, avg_acc: {avg_acc_all / (i+1)}, "
+                         f"avg_acc_0: {avg_acc_0_all / (i+1)}, avg_acc_1: {avg_acc_1_all / (i+1)}")
 
-        return loss_all / (i+1), kl_div_all / (i+1)
+        precision = avg_acc_0_all / (i+1)
+        recall = avg_acc_1_all / (i+1)
+        return loss_all / (i+1), avg_acc_all / (i+1),  precision * recall / (precision + recall + 0.0001) * 2
 
 def get_stealthy_dataset(base_persona, obfu_persona, batch_size=50, max_len=50):
     train_size = int(len(base_persona) * 0.8)
@@ -132,6 +161,6 @@ def get_stealthy_dataset(base_persona, obfu_persona, batch_size=50, max_len=50):
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
     test_dataset = StealthyDataset(base_persona[train_size:], obfu_persona[train_size:], max_len)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
     return train_loader, test_loader

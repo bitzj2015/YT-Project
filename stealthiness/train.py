@@ -40,21 +40,16 @@ base_persona = []
 obfu_persona = []
 base_rec = []
 obfu_rec = []
-
+method = "rl"
 for i in range(1500):
     try:
-        base_persona.append([video_ids[video] for video in data[f"rl_base_{i}"]["viewed"]][0:30])
-        base_rec.append(data[f"rl_base_{i}"]["cate_dist"])
+        base_persona.append([video_ids[video] for video in data[f"{method}_base_{i}"]["viewed"]][0:30])
+        base_rec.append(data[f"{method}_base_{i}"]["cate_dist"])
 
-        obfu_persona.append([video_ids[video] for video in data[f"rl_obfu_{i}"]["viewed"]][0:30])
-        obfu_rec.append(data[f"rl_obfu_{i}"]["cate_dist"])
+        obfu_persona.append([video_ids[video] for video in data[f"{method}_obfu_{i}"]["viewed"]][0:30])
+        obfu_rec.append(data[f"{method}_obfu_{i}"]["cate_dist"])
         # print(len(data[f"rl_base_{i}"]["viewed"]), len(data[f"rl_obfu_{i}"]["viewed"]))
 
-        # base_persona.append([video_ids[video] for video in data[f"rand_base_{i}"]["viewed"]][0:30])
-        # base_rec.append(data[f"rand_base_{i}"]["cate_dist"])
-
-        # obfu_persona.append([video_ids[video] for video in data[f"rand_obfu_{i}"]["viewed"]][0:30])
-        # obfu_rec.append(data[f"rand_obfu_{i}"]["cate_dist"])
     except:
         continue
 
@@ -70,13 +65,14 @@ stealthy_model = StealthyNet(emb_dim=video_embeddings.shape[1], hidden_dim=256, 
 stealthy_optimizer = optim.Adam(stealthy_model.parameters(), lr=0.001)
 stealthy = Stealthy(stealthy_model=stealthy_model, optimizer=stealthy_optimizer, logger=logger)
 
-best_kl = 0
+best_metric = 0
 for ep in range(30):
     logger.info(f"Training epoch: {ep}")
     stealthy.train(train_dataloader)
     logger.info(f"Testing epoch: {ep}")
-    _, kl = stealthy.eval(test_dataloader)
-    if kl > best_kl:
-        best_kl = kl
+    _, _, f1= stealthy.eval(test_dataloader)
+    if f1 > best_metric:
+        best_metric = f1
+        best_ep = ep
         torch.save(stealthy.stealthy_model, f"./param/stealthy_{args.version}.pkl")
-print(best_kl)
+print(best_metric, best_ep)

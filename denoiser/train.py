@@ -12,7 +12,8 @@ parser.add_argument('--version', dest="version", type=str, default="base3")
 parser.add_argument('--use-base', dest="use_base", default=False, action='store_true')
 args = parser.parse_args()
 
-tag = "final_joint_cate_100_2_0.1"
+tag = "final_joint_cate_100_2_test"
+# tag = "final_joint_cate_103_2_test"
 
 with open(f"../obfuscation/figs/dataset_{tag}.json", "r") as json_file:
     data = json.load(json_file)
@@ -43,17 +44,17 @@ obfu_rec = []
 
 for i in range(1500):
     try:
-        # base_persona.append([video_ids[video] for video in data[f"rl_base_{i}"]["viewed"]])
-        # base_rec.append(data[f"rl_base_{i}"]["cate_dist"])
+        base_persona.append([video_ids[video] for video in data[f"rl_base_{i}"]["viewed"]])
+        base_rec.append(data[f"rl_base_{i}"]["cate_dist"])
 
-        # obfu_persona.append([video_ids[video] for video in data[f"rl_obfu_{i}"]["viewed"]])
-        # obfu_rec.append(data[f"rl_obfu_{i}"]["cate_dist"])
+        obfu_persona.append([video_ids[video] for video in data[f"rl_obfu_{i}"]["viewed"]])
+        obfu_rec.append(data[f"rl_obfu_{i}"]["cate_dist"])
 
-        base_persona.append([video_ids[video] for video in data[f"rand_base_{i}"]["viewed"]])
-        base_rec.append(data[f"rand_base_{i}"]["cate_dist"])
+        # base_persona.append([video_ids[video] for video in data[f"rand_base_{i}"]["viewed"]])
+        # base_rec.append(data[f"rand_base_{i}"]["cate_dist"])
 
-        obfu_persona.append([video_ids[video] for video in data[f"rand_obfu_{i}"]["viewed"]])
-        obfu_rec.append(data[f"rand_obfu_{i}"]["cate_dist"])
+        # obfu_persona.append([video_ids[video] for video in data[f"rand_obfu_{i}"]["viewed"]])
+        # obfu_rec.append(data[f"rand_obfu_{i}"]["cate_dist"])
     except:
         continue
 

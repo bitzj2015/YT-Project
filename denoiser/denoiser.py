@@ -93,7 +93,7 @@ class DenoiserNet(torch.nn.Module):
 
         # Predict non-obfuscated recommended video distribution
         if self.base:
-            decoded_ru = self.linear_ru(torch.cat([encoded_vu[:, -1] * 0, encoded_vo[:, -1] * 0, encoded_ro * 1], axis=-1))
+            decoded_ru = self.linear_ru(torch.cat([encoded_vu[:, -1] * 1, encoded_vo[:, -1] * 0, encoded_ro * 0], axis=-1))
         else:
             decoded_ru = self.linear_ru(torch.cat([encoded_vu[:, -1], encoded_vo[:, -1], encoded_ro], axis=-1))
 

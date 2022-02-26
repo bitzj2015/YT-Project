@@ -12,7 +12,7 @@ parser.add_argument('--version', dest="version", type=str, default="base3")
 parser.add_argument('--use-base', dest="use_base", default=False, action='store_true')
 args = parser.parse_args()
 
-tag = "final_joint_cate_100_2_test"
+tag = "final_joint_cate_100_2_0.1"
 
 with open(f"../obfuscation/figs/dataset_{tag}.json", "r") as json_file:
     data = json.load(json_file)
@@ -80,4 +80,4 @@ for ep in range(30):
         best_metric = f1
         best_ep = ep
         torch.save(robust.robust_model, f"./param/robust_{args.version}.pkl")
-print(best_metric, ep)
+print(best_metric, best_ep)
