@@ -11,6 +11,7 @@ import argparse
 VERSION = "final_with_graph"
 VERSION = "final_joint_cate_100_2_0.1"
 VERSION = "final_joint_cate_103_2_test"
+VERSION = "40"
 # VERSION = "reddit_cate_100_2_test"
 parser = argparse.ArgumentParser(description='get metadata.')
 parser.add_argument('--log', type=str, dest="log_path", help='log path', default=f"./logs/log_metadata_{VERSION}.txt")

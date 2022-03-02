@@ -2,6 +2,7 @@ import os
 import json
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+from constants import *
 
 def filter_trans(video_id: str, file_path: str, output_path: str):
     lines = []
@@ -34,14 +35,14 @@ def filter_trans(video_id: str, file_path: str, output_path: str):
 
 len_dist = {}
 parsed_video_ids = {}
-for filename in os.listdir("../dataset/trans_parsed"):
+for filename in os.listdir(f"{root_path}/dataset/trans_parsed"):
     video_id = filename.split(".")[0]
     parsed_video_ids[video_id] = 1
 
-for filename in tqdm(os.listdir("../dataset/trans_en")):
+for filename in tqdm(os.listdir(f"{root_path}/dataset/trans_en")):
     video_id = filename.split(".")[0]
-    file_path = f"../dataset/trans_en/{filename}"
-    output_path = f"../dataset/trans_parsed/{video_id}.json"
+    file_path = f"{root_path}/dataset/trans_en/{filename}"
+    output_path = f"{root_path}/dataset/trans_parsed/{video_id}.json"
     if video_id in parsed_video_ids.keys():
         continue
     cur_len = filter_trans(video_id, file_path, output_path)

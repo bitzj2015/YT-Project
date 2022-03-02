@@ -26,7 +26,7 @@ logger.setLevel(logging.INFO)
 @ray.remote
 def get_video_transcript(video_text_url: list):
     for video_id in tqdm(video_text_url):
-        subprocess.run(["youtube-dl", "--write-auto-sub", "--skip-download", f"https://www.youtube.com/watch?v={video_id}", "--output", f"../dataset/trans_en/{video_id}"], stdout=subprocess.PIPE).stdout
+        subprocess.run(["youtube-dl", "--write-auto-sub", "--skip-download", f"https://www.youtube.com/watch?v={video_id}", "--output", f"/scratch/YT_dataset/dataset/trans_en/{video_id}"], stdout=subprocess.PIPE).stdout
 
 def get_all_video_transcript(
     video_metadata_path: str=f"../dataset/video_metadata_{VERSION}.json"
@@ -36,7 +36,7 @@ def get_all_video_transcript(
 
     video_ids = dict(zip(list(video_metadata.keys()), [0 for _ in range(len(video_metadata.keys()))]))
     print("all videos: {}".format(len(video_ids.keys())))
-    for filename in os.listdir("../dataset/trans_en"):
+    for filename in os.listdir("/scratch/YT_dataset/dataset/trans_en"):
         video_id = filename.split(".")[0]
         if video_id in video_ids.keys():
             del video_ids[video_id]
