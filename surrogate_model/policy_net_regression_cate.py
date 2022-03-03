@@ -84,9 +84,9 @@ class PolicyNetRegression(torch.nn.Module):
         pred_last_cate = F.softmax(outputs, -1)
         last_acc = (last_cate - pred_last_cate) ** 2
         last_acc = torch.sqrt(last_acc.sum(-1)).mean(0).item()
-        print("sample >>>>>>")
-        print(last_cate[0])
-        print(F.softmax(outputs, -1)[0])
+        # print("sample >>>>>>")
+        # print(last_cate[0])
+        # print(F.softmax(outputs, -1)[0])
         
         last_cate = last_cate.tolist()
         pred_last_cate = pred_last_cate.tolist()
