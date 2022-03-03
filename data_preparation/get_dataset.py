@@ -3,6 +3,7 @@ import numpy as np
 import logging
 import h5py
 from tqdm import tqdm
+from constants import *
 
 np.random.seed(0)
 logging.basicConfig(
@@ -19,17 +20,22 @@ VERSION = "_rl_final_new2_cate_test4"
 FILTER = ""
 VERSION = "_reddit"
 FILTER = "_filter"
-with open(f"../dataset/sock_puppets{VERSION}.json", "r") as json_file:
+VERSION = "_40"
+FILTER = ""
+
+with open(f"{root_path}/dataset/sock_puppets{VERSION}.json", "r") as json_file:
     data = json.load(json_file)[2]["data"]
 
-with open(f"../dataset/video_ids{VERSION}.json", "r") as json_file:
+with open(f"{root_path}/dataset/video_ids{VERSION}.json", "r") as json_file:
     video_ids = json.load(json_file)
 
-with open(f"../dataset/category_ids_new.json", "r") as json_file:
+with open(f"{root_path}/dataset/category_ids_latest.json", "r") as json_file:
     cate_ids = json.load(json_file)
 
-with open(f"../dataset/video_metadata{VERSION}.json", "r") as json_file:
+with open(f"{root_path}/dataset/video_metadata{VERSION}.json", "r") as json_file:
     video_metadata = json.load(json_file)
+
+print(cate_ids)
 
 def sample_false_label(
     label: list, 
@@ -95,6 +101,7 @@ print(len(unique_home_video_id))
 
 # unique_home_video_id = {}
 tmp = {}
+num_video_missing_cate = 0
 for i in tqdm(range(len(data))):
     # try:
     input_data = []
@@ -158,7 +165,6 @@ for i in tqdm(range(len(data))):
 
     home_video_ids = {k : v for k, v in sorted(home_video_ids.items(), key=lambda item: item[1], reverse=True)}
     last_label = [video_ids[video_id] for video_id in list(home_video_ids.keys())[0:topk_home]]
-    # print(len(last_label))
     last_label_p = [value for value in list(home_video_ids.values())[0:topk_home]]
     last_label_type = [1 for _ in range(len(last_label))]
 
@@ -166,9 +172,9 @@ for i in tqdm(range(len(data))):
         try:
             last_cate[cate_ids[video_metadata[video_id]["categories"]]] += 1
         except:
+            num_video_missing_cate += 1
             continue
     last_cate_norm = [last_cate[i] / sum(last_cate) for i in range(len(last_cate))]
-    # print(last_cate_norm)
 
     # Label_type: 0 -> true label, 1 -> false label
     last_label_type += [0 for _ in range(max_label_len * last_gain - len(last_label_type))]
@@ -202,7 +208,7 @@ logger.info("Missing {} trails.".format(cnt))
 idx = [i for i in range(len(input_data_all))]
 np.random.seed(0)
 np.random.shuffle(idx)
-print(len(tmp))
+print(len(tmp), num_video_missing_cate)
 
 train_size = int(len(idx) * 0.8)
 input_data_all = np.stack(input_data_all)
@@ -225,7 +231,7 @@ logger.info("Input: {}, label: {}, label_type: {}, mask: {}, last_label: {}, las
     np.shape(last_cate_norm_all))
 )
 
-hf = h5py.File(f"../dataset/train_data{VERSION}{FILTER}.hdf5", "w")
+hf = h5py.File(f"{root_path}/dataset/train_data{VERSION}{FILTER}.hdf5", "w")
 hf.create_dataset('input', data=input_data_all[idx[:train_size]])
 hf.create_dataset('label', data=label_data_all[idx[:train_size]])
 hf.create_dataset('label_type', data=label_type_data_all[idx[:train_size]])
@@ -236,7 +242,7 @@ hf.create_dataset('last_cate_norm', data=last_cate_norm_all[idx[:train_size]])
 hf.create_dataset('mask', data=mask_data_all[idx[:train_size]])
 hf.close()
 
-hf = h5py.File(f"../dataset/test_data{VERSION}{FILTER}.hdf5", "w")
+hf = h5py.File(f"{root_path}/dataset/test_data{VERSION}{FILTER}.hdf5", "w")
 hf.create_dataset('input', data=input_data_all[idx[train_size:]])
 hf.create_dataset('label', data=label_data_all[idx[train_size:]])
 hf.create_dataset('label_type', data=label_type_data_all[idx[train_size:]])
@@ -256,5 +262,5 @@ for i in range(train_size):
         home_video_id[video_id] += 1
 
 home_video_id_sorted = {k: v for k, v in sorted(home_video_id.items(), key=lambda item: item[1], reverse=True)}
-with open(f"../dataset/home_video_id_sorted{VERSION}{FILTER}.json", "w") as json_file:
+with open(f"{root_path}/dataset/home_video_id_sorted{VERSION}{FILTER}.json", "w") as json_file:
     json.dump(home_video_id_sorted, json_file)
