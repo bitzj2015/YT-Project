@@ -2,10 +2,13 @@ import json
 import numpy as np
 import math
 
+root_path = "/project/kpsounis_171"
+# VERSION = "final"
+# TAG = "_filter"
+VERSION = "40"
+TAG = ""
 
-VERSION = "final"
-TAG = "_filter"
-with open(f"../dataset/video_ids_{VERSION}.json", "r") as json_file:
+with open(f"{root_path}/dataset/video_ids_{VERSION}.json", "r") as json_file:
     VIDEO_IDS = json.load(json_file)
     
 ID2VIDEO = {}
@@ -16,7 +19,7 @@ print(len(ID2VIDEO.keys()))
 with open(f"./results/bias_weight_new.json", "r") as json_file:
     BIAS_WEIGHT = json.load(json_file)
 
-with open(f"../dataset/video_adj_list_{VERSION}_w.json", "r") as json_file:
+with open(f"{root_path}/dataset/video_adj_list_{VERSION}_w.json", "r") as json_file:
     video_graph_adj_mat = json.load(json_file)
 
 def kl_divergence(p, q):

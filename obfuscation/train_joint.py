@@ -16,10 +16,10 @@ import ray
 
 # Define arguments for training script
 parser = argparse.ArgumentParser(description='run regression.')
-parser.add_argument('--video-emb', dest="video_emb_path", type=str, default=f"../dataset/video_embeddings_{VERSION}_aug.hdf5")
-parser.add_argument('--video-id', dest="video_id_path", type=str, default=f"../dataset/video_ids_{VERSION}.json")
-parser.add_argument('--train-data', dest="train_data_path", type=str, default=f"../dataset/train_data_{VERSION}{TAG}.hdf5")
-parser.add_argument('--test-data', dest="test_data_path", type=str, default=f"../dataset/test_data_{VERSION}{TAG}.hdf5")
+parser.add_argument('--video-emb', dest="video_emb_path", type=str, default=f"{root_path}/dataset/video_embeddings_{VERSION}_aug.hdf5")
+parser.add_argument('--video-id', dest="video_id_path", type=str, default=f"{root_path}/dataset/video_ids_{VERSION}.json")
+parser.add_argument('--train-data', dest="train_data_path", type=str, default=f"{root_path}/dataset/train_data_{VERSION}{TAG}.hdf5")
+parser.add_argument('--test-data', dest="test_data_path", type=str, default=f"{root_path}/dataset/test_data_{VERSION}{TAG}.hdf5")
 parser.add_argument('--agent-path', dest="agent_path", type=str, default="./param/agent.pkl")
 parser.add_argument('--denoiser-path', dest="denoiser_path", type=str, default="./param/denoiser.pkl")
 parser.add_argument('--alpha', dest="alpha", type=float, default=0.2)

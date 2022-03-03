@@ -1,10 +1,57 @@
-import json
+import os, json
+from random import sample
 from tqdm import tqdm
+import ray
+import subprocess
 
-PHASE = 1
+def get_automatic_captions(js: dict):
+    captions = js.get('automatic_captions', {})
+    if 'en' not in captions:
+        return None
+    return captions['en'][0]['url']
+
+
+def get_subtitles(js: dict):
+    subtitles = js.get('subtitles', {})
+    if 'en' not in subtitles:
+        return None
+    return subtitles['en'][0]['url']
+
+
+@ray.remote
+def get_metadata(video_id_list: list):
+    ret = {}
+    for video_id in tqdm(video_id_list):
+        try:
+            url = 'https://youtube.com/watch?v=%s' % video_id
+            if os.path.exists(f"/scratch/YT_dataset/metadata/{video_id}.json"):
+                js = json.load(open(f"/scratch/YT_dataset/metadata/{video_id}.json", "r"))
+            else:
+                js = json.loads(subprocess.run(['/usr/local/bin/youtube-dl', '-J', url], stdout=subprocess.PIPE).stdout)
+                with open(f"/scratch/YT_dataset/metadata/{video_id}.json", "w") as json_file:
+                    json.dump(js, json_file)
+            metadata = dict(
+                title=js.get('title', ''),
+                channel_id=js.get('channel_id', ''),
+                description=js.get('description', ''),
+                view_count=js.get('view_count', ''),
+                average_rating=js.get("average_rating", ''),
+                thumbnails=','.join([t.get('url') for t in js.get('thumbnails', '')]),
+                categories=','.join(js.get('categories', [])),
+                subtitles=get_subtitles(js),
+                automated_captions=get_automatic_captions(js)
+            )
+            ret.update({video_id: metadata})
+
+        except:
+            ret.update({video_id: {}})
+
+    return ret
+
+PHASE = 2
 
 if PHASE == 0:
-    with open("/scratch/YT_dataset/reddit/Final_Data.txt", "r") as json_file:
+    with open("/scratch/YT_dataset/reddit/Final_Data_for_Crawl.txt", "r") as json_file:
         data = json.load(json_file)
 
     count = 0 
@@ -94,7 +141,7 @@ if PHASE == 0:
     with open("../dataset/trace_len_stat.json", "w") as json_file:
         json.dump(trace_len_stat, json_file)
 
-else:
+elif PHASE == 1:
     seq_len = 40
     with open("../dataset/all_user_data.json", "r") as json_file:
         all_user_data = json.load(json_file)
@@ -116,4 +163,36 @@ else:
     tmp = json.dumps(sample_traces[user])
     print(type(json.loads(tmp)))
 
-            
+else:
+    with open("../dataset/sample_reddit_traces.json", "r") as json_file:
+        sample_traces = json.load(json_file)
+    
+    reddit_videos = {}
+    for user in sample_traces.keys():
+        data = sample_traces[user]
+        for video in data:
+            reddit_videos[video] = {}
+
+
+    # Get video list
+    video_id_list = list(reddit_videos.keys())
+    print(len(video_id_list))
+    num_cpus = os.cpu_count()
+    batch_size = len(video_id_list) // num_cpus + 1
+
+    print("Start getting metadata for videos.")
+    ray.init()
+    rets = ray.get(
+        [get_metadata.remote(video_id_list[i*batch_size: (i+1)*batch_size]) for i in range(num_cpus)]
+    )
+    ray.shutdown()
+    print("Finish getting metadata for videos.")
+
+    # Save all video metadata
+    video_metadata = {} #
+    # video_metadata = json.load(open(video_metadata_path, "r"))
+    for ret in rets:
+        video_metadata.update(ret)
+
+    with open("../dataset/video_metadata_reddit_all.json", "w") as json_file:
+        json.dump(video_metadata, json_file)
