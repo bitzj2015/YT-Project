@@ -16,7 +16,8 @@ VERSION = "final_with_graph"
 VERSION = "final_joint_cate_100_2_0.1"
 VERSION = "final_joint_cate_103_2_test"
 # VERSION = "reddit_cate_100_2_test"
-VERSION = "40"
+VERSION = "reddit_40"
+VERSION = "latest_joint_cate_010"
 
 TYPE = ""
 MAX_LEN = 256

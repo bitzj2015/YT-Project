@@ -6,7 +6,7 @@ from constants import root_path
 VERSION = "_final_joint_cate_100_2_0.1"
 VERSION = "_final_joint_cate_103_2_test"
 VERSION = "_40"
-LOAD_METADATA = False
+LOAD_METADATA = True
 
 with open(f"{root_path}/dataset/video_metadata{VERSION}.json", "r") as json_file:
     video_metadata = json.load(json_file)
@@ -73,8 +73,8 @@ for idx in sorted(id_videos.keys()):
         video2channel[video_id] = ""
 
 print(category_ids)
-with open(f"{root_path}/dataset/category_ids_latest.json", "w") as json_file:
-    json.dump(category_ids, json_file)
+# with open(f"{root_path}/dataset/category_ids_latest.json", "w") as json_file:
+#     json.dump(category_ids, json_file)
     
 categories = np.array(categories)
 average_ratings = np.array(average_ratings)

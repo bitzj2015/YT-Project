@@ -48,7 +48,7 @@ def get_metadata(video_id_list: list):
 
     return ret
 
-PHASE = 2
+PHASE = 4
 
 if PHASE == 0:
     with open("/scratch/YT_dataset/reddit/Final_Data_for_Crawl.txt", "r") as json_file:
@@ -163,7 +163,7 @@ elif PHASE == 1:
     tmp = json.dumps(sample_traces[user])
     print(type(json.loads(tmp)))
 
-else:
+elif PHASE == 2:
     with open("../dataset/sample_reddit_traces.json", "r") as json_file:
         sample_traces = json.load(json_file)
     
@@ -172,7 +172,6 @@ else:
         data = sample_traces[user]
         for video in data:
             reddit_videos[video] = {}
-
 
     # Get video list
     video_id_list = list(reddit_videos.keys())
@@ -196,3 +195,57 @@ else:
 
     with open("../dataset/video_metadata_reddit_all.json", "w") as json_file:
         json.dump(video_metadata, json_file)
+
+elif PHASE == 3:
+    with open("../dataset/sample_reddit_traces.json", "r") as json_file:
+        sample_traces = json.load(json_file)
+
+    with open("../dataset/video_metadata_reddit_all.json", "r") as json_file:
+        video_metadata = json.load(json_file)
+
+    sample_trace_cate = {}
+    trace_cate_stat = {}
+    cnt = 0
+    for user in sample_traces.keys():
+        data = sample_traces[user]
+        sample_trace_cate[user] = {}
+        for video in data:
+            try:
+                cate = video_metadata[video]["categories"]
+                if cate not in sample_trace_cate[user].keys():
+                    sample_trace_cate[user][cate] = 0
+                sample_trace_cate[user][cate] += 1
+            except:
+                continue
+        sample_trace_cate[user] = {k: v for k, v in sorted(sample_trace_cate[user].items(), key=lambda item: item[1], reverse=True)}
+        cate_list = list(sample_trace_cate[user].keys())
+
+        try:
+            trace_cate = f"{cate_list[0]}_{cate_list[1]}"
+            if cate_list[0] == "" or cate_list[1] == "":
+                continue
+            if trace_cate not in trace_cate_stat.keys():
+                trace_cate_stat[trace_cate] = []
+            trace_cate_stat[trace_cate].append(user)
+        except:
+            cnt += 1
+            continue
+    
+    with open("../dataset/sample_reddit_trace_by_cate.json", "w") as json_file:
+        json.dump(trace_cate_stat, json_file)
+
+else:
+    with open("../dataset/sample_reddit_traces.json", "r") as json_file:
+        sample_traces = json.load(json_file)
+
+    with open("../dataset/sample_reddit_trace_by_cate.json", "r") as json_file:
+        trace_cate_stat = json.load(json_file)
+
+    sample_trace_balance = {}
+    for cate in trace_cate_stat.keys():
+        for user in trace_cate_stat[cate][0:100]:
+            sample_trace_balance[user] = sample_traces[user]
+    print(len(sample_traces), len(sample_trace_balance))
+    
+    with open("../dataset/sample_reddit_traces_balanced.json", "w") as json_file:
+        json.dump(sample_trace_balance, json_file)

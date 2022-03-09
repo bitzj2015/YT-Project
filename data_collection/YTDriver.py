@@ -139,7 +139,7 @@ class YTDriver:
             self.logger.info(message)
 
     def __click_video(self, video):
-        # self.tab_restart_browser()
+        self.tab_restart_browser()
         if type(video) == Video:
             self.__log(f"Start watching video {video.videoId}...")
             try:
@@ -175,7 +175,6 @@ class YTDriver:
                 elems = WebDriverWait(self.driver, 15).until(
                     EC.presence_of_all_elements_located((By.XPATH, "//yt-formatted-string[@class='style-scope ytd-video-renderer']"))
                 )
-                print(elems)
                 elem = elems[0]
                 elem.click()
                 return True

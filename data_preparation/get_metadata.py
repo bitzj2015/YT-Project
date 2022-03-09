@@ -5,19 +5,22 @@ from tqdm import tqdm
 import ray
 import logging
 import argparse
+from constants import *
 
 # VERSION = "rl_reddit_new2"
 # VERSION = "final_joint_cate_100_2_test"
 VERSION = "final_with_graph"
 VERSION = "final_joint_cate_100_2_0.1"
 VERSION = "final_joint_cate_103_2_test"
-VERSION = "40"
+VERSION = "reddit_40"
+VERSION = "latest_joint_cate_010"
+
 # VERSION = "reddit_cate_100_2_test"
 parser = argparse.ArgumentParser(description='get metadata.')
 parser.add_argument('--log', type=str, dest="log_path", help='log path', default=f"./logs/log_metadata_{VERSION}.txt")
-parser.add_argument('--data', type=str, dest="sock_puppet_path", help='sock puppet path', default=f"../dataset/sock_puppets_{VERSION}.json")
-parser.add_argument('--video', type=str, dest="video_id_path", help='video id path', default=f"../dataset/video_stat_{VERSION}.json")
-parser.add_argument('--metadata', type=str, dest="video_metadata_path", help='video metadata path', default=f"../dataset/video_metadata_{VERSION}.json")
+parser.add_argument('--data', type=str, dest="sock_puppet_path", help='sock puppet path', default=f"{root_path}/dataset/sock_puppets_{VERSION}.json")
+parser.add_argument('--video', type=str, dest="video_id_path", help='video id path', default=f"{root_path}/dataset/video_stat_{VERSION}.json")
+parser.add_argument('--metadata', type=str, dest="video_metadata_path", help='video metadata path', default=f"{root_path}/dataset/video_metadata_{VERSION}.json")
 args = parser.parse_args()
 
 
@@ -106,13 +109,13 @@ def get_all_metadata(
                         video_ids[video_id] = 0
                     video_ids[video_id] += 1
 
-            # # Recommended videos
-            # rec_trails = data[i]["recommendation_trail"]
-            # for trail in rec_trails:
-            #     for video_id in trail:
-            #         if video_id not in video_ids.keys():
-            #             video_ids[video_id] = 0
-            #         video_ids[video_id] += 1 
+            # Recommended videos
+            rec_trails = data[i]["recommendation_trail"]
+            for trail in rec_trails:
+                for video_id in trail:
+                    if video_id not in video_ids.keys():
+                        video_ids[video_id] = 0
+                    video_ids[video_id] += 1 
         except:
             false_cnt += 1
             continue
