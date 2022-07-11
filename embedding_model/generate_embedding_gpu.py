@@ -11,22 +11,22 @@ from constants import root_path
 
 emb_model = SentenceTransformer('all-MiniLM-L6-v2', device='cuda')
 
-VERSION = "40"
+VERSION = "40_June"
 TYPE = ""
 MAX_LEN = 256
 
-with open(f"{root_path}/dataset/video_metadata_{VERSION}.json", "r") as json_file:
+with open(f"{root_path}/dataset/video_metadata_{VERSION}{TYPE}.json", "r") as json_file:
     video_metadata = json.load(json_file)
 
-with open(f"{root_path}/dataset/video_stat_{VERSION}.json", "r") as json_file:
+with open(f"{root_path}/dataset/video_stat_{VERSION}{TYPE}.json", "r") as json_file:
     video_stat = json.load(json_file)
 
 id_videos = dict(zip([i for i in range(len(video_stat.keys()))], video_stat.keys()))
-with open(f"{root_path}/dataset/id_videos_{VERSION}.json", "w") as json_file:
+with open(f"{root_path}/dataset/id_videos_{VERSION}{TYPE}.json", "w") as json_file:
     json.dump(id_videos, json_file)
 
 video_ids = dict(zip(video_stat.keys(), [i for i in range(len(video_stat.keys()))]))
-with open(f"{root_path}/dataset/video_ids_{VERSION}.json", "w") as json_file:
+with open(f"{root_path}/dataset/video_ids_{VERSION}{TYPE}.json", "w") as json_file:
     json.dump(video_ids, json_file)
 
 embeddings = []

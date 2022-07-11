@@ -3,8 +3,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 ALPHA = 0.2
-VERSION = "reddit_joint_cate_100_2"
+VERSION = "final_joint_cate_100_2_0.3_0"
 # VERSION = "reddit_new3_cate"
+VERSION = "latest_joint_cate_010_0"
+VERSION = "cate_40_June"
+# VERSION = "latest_joint_cate_010_reddit3_1"
 PHASE = "train"
 with open(f"./results/{PHASE}_log_{ALPHA}_{VERSION}.json", "r") as json_file:
     data = json.load(json_file)["reward"]

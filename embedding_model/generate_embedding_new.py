@@ -16,16 +16,16 @@ VERSION = "final_with_graph"
 VERSION = "final_joint_cate_100_2_0.1"
 VERSION = "final_joint_cate_103_2_test"
 # VERSION = "reddit_cate_100_2_test"
-VERSION = "reddit_40"
-VERSION = "latest_joint_cate_010"
+VERSION = "40"
+# VERSION = "latest_joint_cate_010"
 
-TYPE = ""
+TYPE = "_large"
 MAX_LEN = 256
 
-with open(f"{root_path}/dataset/video_metadata_{VERSION}.json", "r") as json_file:
+with open(f"{root_path}/dataset/video_metadata_{VERSION}_large.json", "r") as json_file:
     video_metadata = json.load(json_file)
 
-with open(f"{root_path}/dataset/video_stat_{VERSION}.json", "r") as json_file:
+with open(f"{root_path}/dataset/video_stat_{VERSION}_large.json", "r") as json_file:
     video_stat = json.load(json_file)
 
 id_videos = dict(zip([i for i in range(len(video_stat.keys()))], video_stat.keys()))

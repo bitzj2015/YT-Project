@@ -16,7 +16,7 @@ class PolicyNetRegression(torch.nn.Module):
             hidden_size=hidden_dim,
             num_layers=2,
             bidirectional=False,
-            dropout=0.2,
+            dropout=0.4,
             batch_first=True
         ).to(self.device)
         self.linear = nn.Linear(hidden_dim, 17).to(self.device)
@@ -82,6 +82,7 @@ class PolicyNetRegression(torch.nn.Module):
         
         # Calculate different metrics
         pred_last_cate = F.softmax(outputs, -1)
+        print(inputs[0], pred_last_cate[0], last_cate[0])
         last_acc = (last_cate - pred_last_cate) ** 2
         last_acc = torch.sqrt(last_acc.sum(-1)).mean(0).item()
         # print("sample >>>>>>")

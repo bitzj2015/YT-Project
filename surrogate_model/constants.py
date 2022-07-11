@@ -1,7 +1,7 @@
 import json
 import numpy as np
 
-VERSION = "40"
+VERSION = "40_June"
 TAG = ""
 ROOT_PATH = "/project/kpsounis_171"
 with open(f"{ROOT_PATH}/dataset/home_video_id_sorted_{VERSION}{TAG}.json", "r") as json_file:

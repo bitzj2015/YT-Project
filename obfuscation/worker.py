@@ -7,8 +7,8 @@ import logging
 class RolloutWorker(object):
     def __init__(self, env_args, user_id):
         self.env_args = env_args
-        self.pre_rewards = [0 for _ in range(self.env_args.reward_dim)]
-        self.cur_rewards = [0 for _ in range(self.env_args.reward_dim)]
+        self.pre_rewards = 0 # [0 for _ in range(self.env_args.reward_dim)]
+        self.cur_rewards = 0 # [0 for _ in range(self.env_args.reward_dim)]
         self.watch_history = []
         self.watch_history_base = []
         self.watch_history_type = []
