@@ -1,6 +1,7 @@
 import os
 import json
 from tqdm import tqdm
+root_path = "/scratch/YT_dataset"
 
 puppet = [
 {
@@ -26,8 +27,11 @@ puppet = [
 VERSION = "final_joint_cate_100_2_0.1"
 VERSION = "final_joint_cate_103_2_test"
 VERSION = "reddit_40"
-VERSION = "latest_joint_cate_010"
-# VERSION = "reddit_cate_100_2_test"
+VERSION = "latest_joint_cate_010_0.3"
+# VERSION = "reddit_40_new"
+# VERSION = "latest_joint_cate_010_reddit3_0.2"
+VERSION = "40_June"
+
 root_dir = f"./docker-volume/crawls_{VERSION}"
 for user_dir in sorted(tqdm(os.listdir(root_dir))):
     try:
@@ -39,7 +43,7 @@ for user_dir in sorted(tqdm(os.listdir(root_dir))):
                 puppet[2]["data"].append(data)
     except:
         continue
-
-print("Totoal number of valid sock puppets: {}".format(len(puppet[2]["data"])))
-with open(f"../dataset/sock_puppets_{VERSION}.json", "w") as json_file:
-    json.dump(puppet, json_file)
+print(data.keys())
+# print("Totoal number of valid sock puppets: {}".format(len(puppet[2]["data"])))
+# with open(f"{root_path}/dataset/sock_puppets_{VERSION}.json", "w") as json_file:
+#     json.dump(puppet, json_file)

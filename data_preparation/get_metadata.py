@@ -7,6 +7,8 @@ import logging
 import argparse
 from constants import *
 
+
+metadata_root_path = "/scratch/YT_dataset/metadata"
 # VERSION = "rl_reddit_new2"
 # VERSION = "final_joint_cate_100_2_test"
 VERSION = "final_with_graph"
@@ -14,6 +16,13 @@ VERSION = "final_joint_cate_100_2_0.1"
 VERSION = "final_joint_cate_103_2_test"
 VERSION = "reddit_40"
 VERSION = "latest_joint_cate_010"
+VERSION = "40"
+VERSION = "latest_joint_cate_010_0.1"
+VERSION = "reddit_40_new"
+VERSION = "latest_joint_cate_010_reddit3_0.2"
+VERSION = "latest_joint_cate_010_0.3"
+VERSION = "40_June"
+VERSION = "realuser"
 
 # VERSION = "reddit_cate_100_2_test"
 parser = argparse.ArgumentParser(description='get metadata.')
@@ -55,11 +64,11 @@ def get_metadata(video_id_list: list):
     for video_id in tqdm(video_id_list):
         try:
             url = 'https://youtube.com/watch?v=%s' % video_id
-            if os.path.exists(f"/scratch/YT_dataset/metadata/{video_id}.json"):
-                js = json.load(open(f"/scratch/YT_dataset/metadata/{video_id}.json", "r"))
+            if os.path.exists(f"{metadata_root_path}/{video_id}.json"):
+                js = json.load(open(f"{metadata_root_path}/{video_id}.json", "r"))
             else:
                 js = json.loads(subprocess.run(['/usr/local/bin/youtube-dl', '-J', url], stdout=subprocess.PIPE).stdout)
-                with open(f"/scratch/YT_dataset/metadata/{video_id}.json", "w") as json_file:
+                with open(f"{metadata_root_path}/{video_id}.json", "w") as json_file:
                     json.dump(js, json_file)
             metadata = dict(
                 title=js.get('title', ''),
@@ -67,8 +76,9 @@ def get_metadata(video_id_list: list):
                 description=js.get('description', ''),
                 view_count=js.get('view_count', ''),
                 average_rating=js.get("average_rating", ''),
-                thumbnails=','.join([t.get('url') for t in js.get('thumbnails', '')]),
+                # thumbnails=','.join([t.get('url') for t in js.get('thumbnails', '')]),
                 categories=','.join(js.get('categories', [])),
+                tags=','.join(js.get('tags', [])),
                 subtitles=get_subtitles(js),
                 automated_captions=get_automatic_captions(js)
             )
@@ -109,13 +119,13 @@ def get_all_metadata(
                         video_ids[video_id] = 0
                     video_ids[video_id] += 1
 
-            # Recommended videos
-            rec_trails = data[i]["recommendation_trail"]
-            for trail in rec_trails:
-                for video_id in trail:
-                    if video_id not in video_ids.keys():
-                        video_ids[video_id] = 0
-                    video_ids[video_id] += 1 
+            # # Recommended videos
+            # rec_trails = data[i]["recommendation_trail"]
+            # for trail in rec_trails:
+            #     for video_id in trail:
+            #         if video_id not in video_ids.keys():
+            #             video_ids[video_id] = 0
+            #         video_ids[video_id] += 1 
         except:
             false_cnt += 1
             continue

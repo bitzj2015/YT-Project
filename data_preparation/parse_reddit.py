@@ -154,10 +154,10 @@ elif PHASE == 1:
         num_user_videos = len(user_video_list)
         num_batches = num_user_videos // 40
 
-        if num_batches > 0:
-            sample_traces[user] = user_video_list[(num_batches - 1) * seq_len : num_batches * seq_len]
+        for i in range(num_batches):
+            sample_traces[f"{user}_{i}"] = user_video_list[(i - 1) * seq_len : i * seq_len]
     
-    with open("../dataset/sample_reddit_traces.json", "w") as json_file:
+    with open("../dataset/sample_reddit_traces_new.json", "w") as json_file:
         json.dump(sample_traces, json_file)
     
     tmp = json.dumps(sample_traces[user])
@@ -221,8 +221,8 @@ elif PHASE == 3:
         cate_list = list(sample_trace_cate[user].keys())
 
         try:
-            trace_cate = f"{cate_list[0]}_{cate_list[1]}"
-            if cate_list[0] == "" or cate_list[1] == "":
+            trace_cate = f"{cate_list[0]}"
+            if cate_list[0] == "":
                 continue
             if trace_cate not in trace_cate_stat.keys():
                 trace_cate_stat[trace_cate] = []
@@ -230,22 +230,23 @@ elif PHASE == 3:
         except:
             cnt += 1
             continue
-    
-    with open("../dataset/sample_reddit_trace_by_cate.json", "w") as json_file:
+    for key in trace_cate_stat.keys():
+        print(key, len(trace_cate_stat[key]))
+    with open("../dataset/sample_reddit_trace_by_cate_new.json", "w") as json_file:
         json.dump(trace_cate_stat, json_file)
 
 else:
     with open("../dataset/sample_reddit_traces.json", "r") as json_file:
         sample_traces = json.load(json_file)
 
-    with open("../dataset/sample_reddit_trace_by_cate.json", "r") as json_file:
+    with open("../dataset/sample_reddit_trace_by_cate_new.json", "r") as json_file:
         trace_cate_stat = json.load(json_file)
 
     sample_trace_balance = {}
     for cate in trace_cate_stat.keys():
-        for user in trace_cate_stat[cate][0:100]:
+        for user in trace_cate_stat[cate][0:1000]:
             sample_trace_balance[user] = sample_traces[user]
     print(len(sample_traces), len(sample_trace_balance))
     
-    with open("../dataset/sample_reddit_traces_balanced.json", "w") as json_file:
+    with open("../dataset/sample_reddit_traces_balanced_new.json", "w") as json_file:
         json.dump(sample_trace_balance, json_file)

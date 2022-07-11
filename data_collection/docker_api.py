@@ -81,6 +81,8 @@ if __name__ == "__main__":
     batch = []
     seed_videos = {}
     for i in range(10000):
+        if  i < 1800:
+            continue
         seed_id = videos.sample(1).iloc[0]
         seed_videos[f"user_{i}"] = seed_id
         count += 1

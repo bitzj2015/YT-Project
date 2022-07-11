@@ -7,29 +7,32 @@ from constants import *
 def filter_trans(video_id: str, file_path: str, output_path: str):
     lines = []
     res = []
-    with open(file_path, "r",encoding="ISO-8859-1") as text_file:
-        for line in text_file.readlines():
-            if line.endswith("</c>\n"):
-                lines.append(line)
-
-    for line in lines:
-        res += [i.split("<")[0] for i in line.split("<c> ")]
-
-    if len(res) == 0:
-        lines = []
-        res = []
-        with open(file_path, "r") as text_file:
+    try:
+        with open(file_path, "r",encoding="ISO-8859-1") as text_file:
             for line in text_file.readlines():
-                if line == "\n":
-                    continue
-                elif len(line.split('-->')) == 2:
-                    continue
-                else:
-                    lines.append(line[:-1].replace(',', '').replace('.', '').lower())
+                if line.endswith("</c>\n"):
+                    lines.append(line)
+
         for line in lines:
-            res += line.split(" ")
-    with open(output_path, "w") as json_file:
-        json.dump({video_id: " ".join(res)}, json_file)
+            res += [i.split("<")[0] for i in line.split("<c> ")]
+
+        if len(res) == 0:
+            lines = []
+            res = []
+            with open(file_path, "r") as text_file:
+                for line in text_file.readlines():
+                    if line == "\n":
+                        continue
+                    elif len(line.split('-->')) == 2:
+                        continue
+                    else:
+                        lines.append(line[:-1].replace(',', '').replace('.', '').lower())
+            for line in lines:
+                res += line.split(" ")
+        with open(output_path, "w") as json_file:
+            json.dump({video_id: " ".join(res)}, json_file)
+    except:
+        print(video_id)
 
     return len(res)
 

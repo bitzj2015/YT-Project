@@ -35,7 +35,7 @@ puppet_id = str(uuid.uuid4())
 driver = YTDriver(browser='firefox', verbose=True, headless=True, logger=logger)
 
 # Get youtube initial homepage
-initial_homepage_videos = driver.get_homepage()
+initial_homepage_videos = driver.get_homepage(use_url=True)
 initial_homepage_video_ids = [video.videoId for video in initial_homepage_videos]
 
 # List for storing videos

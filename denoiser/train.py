@@ -14,11 +14,14 @@ args = parser.parse_args()
 
 tag = "final_joint_cate_100_2_test"
 # tag = "final_joint_cate_103_2_test"
+tag = "latest_joint_cate_010"
+tag = "latest_joint_cate_010_reddit3_0.2"
+tag_base = "reddit_40"
 
 with open(f"../obfuscation/figs/dataset_{tag}.json", "r") as json_file:
     data = json.load(json_file)
 
-with open(f"../dataset/video_ids_{tag}.json", "r") as json_file:
+with open(f"/scratch/YT_dataset/dataset/video_ids_{tag_base}.json", "r") as json_file:
     video_ids = json.load(json_file)
 
 use_cuda = False
@@ -42,13 +45,13 @@ obfu_persona = []
 base_rec = []
 obfu_rec = []
 
-for i in range(1500):
+for i in range(1800):
     try:
-        base_persona.append([video_ids[video] for video in data[f"rl_base_{i}"]["viewed"]])
-        base_rec.append(data[f"rl_base_{i}"]["cate_dist"])
+        base_persona.append([video_ids[video] for video in data[f"rand_base_{i}"]["viewed"]])
+        base_rec.append(data[f"rand_base_{i}"]["cate_dist"])
 
-        obfu_persona.append([video_ids[video] for video in data[f"rl_obfu_{i}"]["viewed"]])
-        obfu_rec.append(data[f"rl_obfu_{i}"]["cate_dist"])
+        obfu_persona.append([video_ids[video] for video in data[f"bias_obfu_{i}"]["viewed"]])
+        obfu_rec.append(data[f"bias_obfu_{i}"]["cate_dist"])
 
         # base_persona.append([video_ids[video] for video in data[f"rand_base_{i}"]["viewed"]])
         # base_rec.append(data[f"rand_base_{i}"]["cate_dist"])
@@ -58,9 +61,9 @@ for i in range(1500):
     except:
         continue
 
-train_dataloader, test_dataloader = get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, batch_size=50, max_len=50)
+train_dataloader, test_dataloader = get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, batch_size=50, max_len=60)
 
-with h5py.File(f"../dataset/video_embeddings_{tag}_aug.hdf5", "r") as hf_emb:
+with h5py.File(f"/scratch/YT_dataset/dataset/video_embeddings_{tag_base}_aug.hdf5", "r") as hf_emb:
     video_embeddings = hf_emb["embeddings"][:].astype("float32")
 video_embeddings = torch.from_numpy(video_embeddings).to(device)
 

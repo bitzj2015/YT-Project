@@ -81,7 +81,7 @@ class RobustNet(torch.nn.Module):
                     count[2] += 1
         avg_acc = [avg_acc[i] / (count[i] + 0.0001) for i in range(3)]
             
-        return -logits, avg_acc[0], avg_acc[1], avg_acc[2]
+        return -logits, avg_acc[0], avg_acc[1], avg_acc[2], count
 
 
 class RobustDataset(Dataset):
@@ -119,48 +119,68 @@ class Robust(object):
 
     def train(self, train_dataloader):
         self.robust_model.train()
-        loss_all, avg_acc_all, avg_acc_0_all, avg_acc_1_all = 0, 0, 0, 0
+        loss_all, avg_acc_all, precision_all, recall_all = 0, 0, 0, 0
+        count_all = [0.001, 0.001, 0.001]
         for i, batch in enumerate(train_dataloader):
             input, label, mask = batch["input"], batch["label"], batch["mask"]
-            loss, avg_acc, avg_acc_0, avg_acc_1 = self.robust_model(input, label, mask)
+            loss, avg_acc, precision, recall, count = self.robust_model(input, label, mask)
             loss = loss.mean(0)
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
             loss_all += loss.item()
-            avg_acc_all += avg_acc
-            avg_acc_0_all += avg_acc_0
-            avg_acc_1_all += avg_acc_1
+
+            avg_acc_all += avg_acc * count[0]
+            precision_all += precision * count[1]
+            recall_all += recall * count[2]
+
+            count_all[0] += count[0]
+            count_all[1] += count[1]
+            count_all[2] += count[2]
+
             if i % 10 == 0:
-                self.logger.info(f"End, loss: {loss_all / (i+1)}, avg_acc: {avg_acc_all / (i+1)}, "
-                                 f"avg_acc_0: {avg_acc_0_all / (i+1)}, avg_acc_1: {avg_acc_1_all / (i+1)}")
+                self.logger.info(f"End, loss: {loss_all / (i+1)}, avg_acc: {avg_acc_all / count_all[0]}, "
+                                 f"precision: {precision_all / count_all[1]}, recall: {recall_all / count_all[2]}")
 
         return loss_all / (i+1), avg_acc_all / (i+1)
 
     def eval(self, eval_dataloader):
         self.robust_model.eval()
-        loss_all, avg_acc_all, avg_acc_0_all, avg_acc_1_all = 0, 0, 0, 0
+        loss_all, avg_acc_all, precision_all, recall_all = 0, 0, 0, 0
+        count_all = [0.001, 0.001, 0.001]
         for i, batch in enumerate(eval_dataloader):
             input, label, mask = batch["input"], batch["label"], batch["mask"]
-            loss, avg_acc, avg_acc_0, avg_acc_1 = self.robust_model(input, label, mask)
+            loss, avg_acc, precision, recall, count = self.robust_model(input, label, mask)
             loss = loss.mean(0)
             loss_all += loss.item()
-            avg_acc_all += avg_acc
-            avg_acc_0_all += avg_acc_0
-            avg_acc_1_all += avg_acc_1
-        self.logger.info(f"End, loss: {loss_all / (i+1)}, avg_acc: {avg_acc_all / (i+1)}, "
-                         f"avg_acc_0: {avg_acc_0_all / (i+1)}, avg_acc_1: {avg_acc_1_all / (i+1)}")
-        precision = avg_acc_0_all / (i+1)
-        recall = avg_acc_1_all / (i+1)
-        return loss_all / (i+1), avg_acc_all / (i+1),  precision * recall / (precision + recall + 0.0001) * 2
+            avg_acc_all += avg_acc * count[0]
+            precision_all += precision * count[1]
+            recall_all += recall * count[2]
+
+            count_all[0] += count[0]
+            count_all[1] += count[1]
+            count_all[2] += count[2]
+
+        self.logger.info(f"End, loss: {loss_all / (i+1)}, avg_acc: {avg_acc_all / count_all[0]}, "
+                         f"precision: {precision_all / count_all[1]}, recall: {recall_all / count_all[2]}")
+
+        precision = precision_all / count_all[1]
+        recall = recall_all / count_all[2]
+        return loss_all / (i+1), avg_acc_all / count_all[0], precision, recall, precision * recall / (precision + recall + 0.0001) * 2
+
+
 
 def get_robust_dataset(obfu_persona, obfu_rec, batch_size=50, max_len=50):
-    train_size = int(len(obfu_persona) * 0.8)
+    train_size = int(len(obfu_persona) * 0.7)
+    val_size = int(len(obfu_persona) * 0.8)
     print(train_size, len(obfu_persona), len(obfu_persona))
     train_dataset = RobustDataset(obfu_persona[:train_size], obfu_rec[:train_size], max_len)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-    test_dataset = RobustDataset(obfu_persona[train_size:], obfu_rec[train_size:], max_len)
+    val_dataset = RobustDataset(obfu_persona[train_size:val_size], obfu_rec[train_size:val_size], max_len)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
+
+    test_dataset = RobustDataset(obfu_persona[val_size:], obfu_rec[val_size:], max_len)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-    return train_loader, test_loader
+    return train_loader, val_loader, test_loader

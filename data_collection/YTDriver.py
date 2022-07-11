@@ -58,15 +58,19 @@ class YTDriver:
     def close(self):
         self.driver.close()
 
-    def get_homepage(self, scroll_times=0):
+    def get_homepage(self, scroll_times=0, use_url=False):
         # try to find the youtube icon
         max_trial = 0
         while max_trial <= 3:
             if max_trial == 0:
-                try:
-                    self.__log('clicking yt icon')
-                    self.driver.find_element_by_id('logo').click()
-                except:
+                if not use_url:
+                    try:
+                        self.__log('clicking yt icon')
+                        self.driver.find_element_by_id('logo-icon').click()
+                    except:
+                        self.__log('getting via url')
+                        self.driver.get('https://www.youtube.com')
+                else:
                     self.__log('getting via url')
                     self.driver.get('https://www.youtube.com')
             else:
@@ -139,7 +143,7 @@ class YTDriver:
             self.logger.info(message)
 
     def __click_video(self, video):
-        self.tab_restart_browser()
+        # self.tab_restart_browser()
         if type(video) == Video:
             self.__log(f"Start watching video {video.videoId}...")
             try:

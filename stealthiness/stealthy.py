@@ -88,7 +88,7 @@ class StealthyNet(torch.nn.Module):
         # if not eval:
         #     print(avg_acc, count)
 
-        return -logits, avg_acc[0], avg_acc[1], avg_acc[2]
+        return -logits, avg_acc[0], avg_acc[1], avg_acc[2], count
 
 class StealthyDataset(Dataset):
     def __init__(self, base_persona, obfu_persona, max_len=50):
@@ -118,49 +118,66 @@ class Stealthy(object):
 
     def train(self, train_dataloader):
         self.stealthy_model.train()
-        loss_all, avg_acc_all, avg_acc_0_all, avg_acc_1_all = 0, 0, 0, 0
+        loss_all, avg_acc_all, precision_all, recall_all = 0, 0, 0, 0
+        count_all = [0.001, 0.001, 0.001]
         for i, batch in enumerate(train_dataloader):
             input, label = batch["input"], batch["label"]
-            loss, avg_acc, avg_acc_0, avg_acc_1 = self.stealthy_model(input, label)
+            loss, avg_acc, precision, recall, count = self.stealthy_model(input, label)
             loss = loss.mean(0)
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
             loss_all += loss.item()
-            avg_acc_all += avg_acc
-            avg_acc_0_all += avg_acc_0
-            avg_acc_1_all += avg_acc_1
+
+            avg_acc_all += avg_acc * count[0]
+            precision_all += precision * count[1]
+            recall_all += recall * count[2]
+
+            count_all[0] += count[0]
+            count_all[1] += count[1]
+            count_all[2] += count[2]
+
             if i % 10 == 0:
-                self.logger.info(f"End, loss: {loss_all / (i+1)}, avg_acc: {avg_acc_all / (i+1)}, "
-                                 f"avg_acc_0: {avg_acc_0_all / (i+1)}, avg_acc_1: {avg_acc_1_all / (i+1)}")
+                self.logger.info(f"End, loss: {loss_all / (i+1)}, avg_acc: {avg_acc_all / count_all[0]}, "
+                                 f"precision: {precision_all / count_all[1]}, recall: {recall_all / count_all[2]}")
 
         return loss_all / (i+1), avg_acc_all / (i+1)
 
     def eval(self, eval_dataloader):
         self.stealthy_model.eval()
-        loss_all, avg_acc_all, avg_acc_0_all, avg_acc_1_all = 0, 0, 0, 0
+        loss_all, avg_acc_all, precision_all, recall_all = 0, 0, 0, 0
+        count_all = [0.001, 0.001, 0.001]
         for i, batch in enumerate(eval_dataloader):
             input, label = batch["input"], batch["label"]
-            loss, avg_acc, avg_acc_0, avg_acc_1 = self.stealthy_model(input, label, eval=True)
+            loss, avg_acc, precision, recall, count = self.stealthy_model(input, label, eval=True)
             loss = loss.mean(0)
             loss_all += loss.item()
-            avg_acc_all += avg_acc
-            avg_acc_0_all += avg_acc_0
-            avg_acc_1_all += avg_acc_1
-        self.logger.info(f"End, loss: {loss_all / (i+1)}, avg_acc: {avg_acc_all / (i+1)}, "
-                         f"avg_acc_0: {avg_acc_0_all / (i+1)}, avg_acc_1: {avg_acc_1_all / (i+1)}")
+            avg_acc_all += avg_acc * count[0]
+            precision_all += precision * count[1]
+            recall_all += recall * count[2]
 
-        precision = avg_acc_0_all / (i+1)
-        recall = avg_acc_1_all / (i+1)
-        return loss_all / (i+1), avg_acc_all / (i+1),  precision * recall / (precision + recall + 0.0001) * 2
+            count_all[0] += count[0]
+            count_all[1] += count[1]
+            count_all[2] += count[2]
+
+        self.logger.info(f"End, loss: {loss_all / (i+1)}, avg_acc: {avg_acc_all / count_all[0]}, "
+                         f"precision: {precision_all / count_all[1]}, recall: {recall_all / count_all[2]}")
+
+        precision = precision_all / count_all[1]
+        recall = recall_all / count_all[2]
+        return loss_all / (i+1), avg_acc_all / count_all[0], precision, recall, precision * recall / (precision + recall + 0.0001) * 2
 
 def get_stealthy_dataset(base_persona, obfu_persona, batch_size=50, max_len=50):
-    train_size = int(len(base_persona) * 0.8)
+    train_size = int(len(base_persona) * 0.7)
+    val_size = int(len(base_persona) * 0.8)
     print(train_size, len(base_persona), len(obfu_persona))
     train_dataset = StealthyDataset(base_persona[:train_size], obfu_persona[:train_size], max_len)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-    test_dataset = StealthyDataset(base_persona[train_size:], obfu_persona[train_size:], max_len)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+    val_dataset = StealthyDataset(base_persona[train_size:val_size], obfu_persona[train_size:val_size], max_len)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    return train_loader, test_loader
+    test_dataset = StealthyDataset(base_persona[val_size:], obfu_persona[val_size:], max_len)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    return train_loader, val_loader, test_loader

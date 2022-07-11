@@ -5,6 +5,7 @@ import subprocess
 import logging
 from tqdm import tqdm
 import argparse
+from constants import *
 
 parser = argparse.ArgumentParser(description='get metadata.')
 parser.add_argument('--version', type=str, dest="version", help='dataset version', default="rl_new")
@@ -29,7 +30,7 @@ def get_video_transcript(video_text_url: list):
         subprocess.run(["youtube-dl", "--write-auto-sub", "--skip-download", f"https://www.youtube.com/watch?v={video_id}", "--output", f"/scratch/YT_dataset/dataset/trans_en/{video_id}"], stdout=subprocess.PIPE).stdout
 
 def get_all_video_transcript(
-    video_metadata_path: str=f"../dataset/video_metadata_{VERSION}.json"
+    video_metadata_path: str=f"{root_path}/dataset/video_metadata_{VERSION}.json"
 ):
     with open(video_metadata_path, "r") as json_file:
         video_metadata = json.load(json_file)
@@ -54,4 +55,4 @@ def get_all_video_transcript(
     ray.shutdown()
 
 if __name__=="__main__":
-    get_all_video_transcript(f"../dataset/video_stat_{VERSION}.json")
+    get_all_video_transcript(f"{root_path}/dataset/video_stat_{VERSION}.json")

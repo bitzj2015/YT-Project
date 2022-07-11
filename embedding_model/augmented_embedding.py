@@ -5,7 +5,8 @@ from constants import root_path
 
 VERSION = "_final_joint_cate_100_2_0.1"
 VERSION = "_final_joint_cate_103_2_test"
-VERSION = "_40"
+VERSION = "_40_June"
+VERSION = "_realuser"
 LOAD_METADATA = True
 
 with open(f"{root_path}/dataset/video_metadata{VERSION}.json", "r") as json_file:
@@ -14,7 +15,7 @@ with open(f"{root_path}/dataset/video_metadata{VERSION}.json", "r") as json_file
 with open(f"{root_path}/dataset/video_stat{VERSION}.json", "r") as json_file:
     video_stat = json.load(json_file)
 
-print(len(video_stat))
+print(len(video_metadata))
 id_videos = dict(zip([i for i in range(len(video_stat.keys()))], video_stat.keys()))
 with open(f"{root_path}/dataset/id_videos{VERSION}.json", "w") as json_file:
     json.dump(id_videos, json_file)
@@ -80,7 +81,7 @@ categories = np.array(categories)
 average_ratings = np.array(average_ratings)
 view_counts = np.array(view_counts)
 
-max_cate = np.max(categories) + 1
+max_cate = np.max(categories) + 2
 I = np.eye(max_cate)
 one_hot_categories = I[categories]
 
@@ -121,37 +122,37 @@ hf.create_dataset('video_ids', data=videoIds)
 hf.close()
 print(isinstance(augmented_embeddings[0][0], np.float32))
 
-# with open(f"{root_path}/dataset/video_video_edge{VERSION}_w.json", "r") as json_file:
-#     video_video_edge = json.load(json_file)
+# # with open(f"{root_path}/dataset/video_video_edge{VERSION}_w.json", "r") as json_file:
+# #     video_video_edge = json.load(json_file)
 
-# video_adj_list = dict(zip([i for i in range(len(video_ids.keys()))], [{} for _ in range(len(video_ids.keys()))]))
-# for video_id in tqdm(video_video_edge.keys()):
-#     for recvideo_id in video_video_edge[video_id].keys():
-#         video_adj_list[video_ids[video_id]][video_ids[recvideo_id]] = video_video_edge[video_id][recvideo_id]
-#     channel_id = video2channel[video_id]
-#     if channel_id != "":
-#         for same_ch_video in channel2video[channel_id].keys():
-#             video_adj_list[video_ids[video_id]][video_ids[same_ch_video]] = 1 
-# print(len(channel2video.keys()))
-# with open(f"{root_path}/dataset/video_adj_list{VERSION}_w_aug.json", "w") as json_file:
-#     json.dump(video_adj_list, json_file)
+# # video_adj_list = dict(zip([i for i in range(len(video_ids.keys()))], [{} for _ in range(len(video_ids.keys()))]))
+# # for video_id in tqdm(video_video_edge.keys()):
+# #     for recvideo_id in video_video_edge[video_id].keys():
+# #         video_adj_list[video_ids[video_id]][video_ids[recvideo_id]] = video_video_edge[video_id][recvideo_id]
+# #     channel_id = video2channel[video_id]
+# #     if channel_id != "":
+# #         for same_ch_video in channel2video[channel_id].keys():
+# #             video_adj_list[video_ids[video_id]][video_ids[same_ch_video]] = 1 
+# # print(len(channel2video.keys()))
+# # with open(f"{root_path}/dataset/video_adj_list{VERSION}_w_aug.json", "w") as json_file:
+# #     json.dump(video_adj_list, json_file)
 
-with open(f"{root_path}/dataset/video2channel{VERSION}.json", "w") as json_file:
-    json.dump(video2channel, json_file)
+# with open(f"{root_path}/dataset/video2channel{VERSION}.json", "w") as json_file:
+#     json.dump(video2channel, json_file)
 
-with open(f"{root_path}/dataset/channel2video{VERSION}.json", "w") as json_file:
-    json.dump(channel2video, json_file)
+# with open(f"{root_path}/dataset/channel2video{VERSION}.json", "w") as json_file:
+#     json.dump(channel2video, json_file)
 
-channel_ids = dict(zip(list(channel2video.keys()), [i for i in range(len(channel2video))]))
-video2channel_ids = {}
-for video_id in video2channel.keys():
-    video2channel_ids[video_id] = channel_ids[video2channel[video_id]]
+# channel_ids = dict(zip(list(channel2video.keys()), [i for i in range(len(channel2video))]))
+# video2channel_ids = {}
+# for video_id in video2channel.keys():
+#     video2channel_ids[video_id] = channel_ids[video2channel[video_id]]
 
-with open(f"{root_path}/dataset/channel_ids{VERSION}.json", "w") as json_file:
-    json.dump(channel_ids, json_file)
+# with open(f"{root_path}/dataset/channel_ids{VERSION}.json", "w") as json_file:
+#     json.dump(channel_ids, json_file)
 
-with open(f"{root_path}/dataset/video2channel_ids{VERSION}.json", "w") as json_file:
-    json.dump(video2channel_ids, json_file)
+# with open(f"{root_path}/dataset/video2channel_ids{VERSION}.json", "w") as json_file:
+#     json.dump(video2channel_ids, json_file)
 
 
 

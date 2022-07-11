@@ -77,19 +77,19 @@ if __name__ == "__main__":
     # task = "reddit_crawl"
     batch = []
     if task == "reddit_crawl":
-        with open("../dataset/sample_reddit_traces_balanced.json", "r") as json_file:
+        with open("../dataset/sample_reddit_traces_balanced_new.json", "r") as json_file:
             reddit_user_data = json.load(json_file)
         
         users = list(reddit_user_data.keys())
-        sample_users = random.sample(users, 10000)
+        sample_users = random.sample(users, 10000-150)
         count = 0
         
         video_seqs = {}
 
         for user in sample_users:
-            # if count < 4650:
-            #     count += 1
-            #     continue
+            if count < 5100:
+                count += 1
+                continue
             video_seq = reddit_user_data[user]
             video_seqs[f"{user}_{count}"] = video_seq
             count += 1
@@ -109,7 +109,7 @@ if __name__ == "__main__":
 
         for i in tqdm(range(len(batch))):
             ray.init()
-            run_docker(batch[i], logger=logger, real_root="$PWD/docker-volume/crawls_reddit_40", timeout=40)
+            run_docker(batch[i], logger=logger, real_root="$PWD/docker-volume/crawls_reddit_40_new", timeout=40)
             ray.shutdown()
             os.system("yes | sudo docker container prune")
 
@@ -152,7 +152,7 @@ if __name__ == "__main__":
         tag1 = "final_joint_cate_100_2_test" # test_user_trace_0.2_final_joint_cate_109_2_test_0_new.json
         tag2 = "final_joint_cate_103_2_test"
         tag = "latest_joint_cate_010"
-        # tag = "reddit_cate_100_2_test"
+        # tag = "latest_joint_cate_010_reddit3"
         
         with open(f"../obfuscation/results/test_user_trace_0.2_{tag}_0_new.json", "r") as json_file:
             rl_user_data = json.load(json_file)
@@ -160,18 +160,22 @@ if __name__ == "__main__":
         with open(f"../obfuscation/results/test_user_trace_0.2_{tag}_1_new.json", "r") as json_file:
             rand_user_data = json.load(json_file)
 
+        with open(f"../obfuscation/results/test_user_trace_0.2_{tag}_2_new.json", "r") as json_file:
+            bias_user_data = json.load(json_file)
+
         batch = []
-        for i in range(2):
-            # if i < 5:
-            #     continue
+        for i in range(1):
             video_seqs = {}
-            for j in range(40):
-                # if i*40+j >= 1500:
+            for j in range(30):
+                # if i*30+j >= 1800:
                 #     break
-                video_seqs[f"rl_base_{i*40+j}"] = rl_user_data["base"][str(i*40+j)]
-                video_seqs[f"rl_obfu_{i*40+j}"] = rl_user_data["obfu"][str(i*40+j)]
-                video_seqs[f"rand_base_{i*40+j}"] = rand_user_data["base"][str(i*40+j)]
-                video_seqs[f"rand_obfu_{i*40+j}"] = rand_user_data["obfu"][str(i*40+j)]
+                # if i*30+j < 600:
+                #     continue
+                video_seqs[f"rl_base_{i*30+j}"] = rl_user_data["base"][str(i*30+j)]
+                video_seqs[f"rl_obfu_{i*30+j}"] = rl_user_data["obfu"][str(i*30+j)]
+                video_seqs[f"rand_base_{i*30+j}"] = rand_user_data["base"][str(i*30+j)]
+                video_seqs[f"rand_obfu_{i*30+j}"] = rand_user_data["obfu"][str(i*30+j)]
+                video_seqs[f"bias_obfu_{i*30+j}"] = bias_user_data["obfu"][str(i*30+j)]
             batch.append(video_seqs)
     
         logging.basicConfig(
@@ -186,5 +190,5 @@ if __name__ == "__main__":
 
         for i in tqdm(range(len(batch))):
             ray.init()
-            run_docker(batch[i], logger=logger, real_root=f"$PWD/docker-volume/crawls_{tag}", timeout=60)
+            run_docker(batch[i], logger=logger, real_root=f"$PWD/docker-volume/crawls_{tag}_0.2_test", timeout=60)
             ray.shutdown()

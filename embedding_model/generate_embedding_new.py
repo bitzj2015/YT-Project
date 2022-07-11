@@ -17,7 +17,10 @@ VERSION = "final_joint_cate_100_2_0.1"
 VERSION = "final_joint_cate_103_2_test"
 # VERSION = "reddit_cate_100_2_test"
 VERSION = "reddit_40"
-VERSION = "latest_joint_cate_010"
+VERSION = "latest_joint_cate_010_0.3"
+# VERSION = "latest_joint_cate_010_reddit3_0.2"
+VERSION = "40_June"
+VERSION = "realuser"
 
 TYPE = ""
 MAX_LEN = 256
@@ -57,7 +60,6 @@ for idx in tqdm(sorted(id_videos.keys())):
             video_texts.append(" ")
             cnt += 1
 print("Missing {} videos' metadata, {} with transcripts.".format(cnt, cnt2))
-
 def get_embedding(video_text_list, emb_model):
     embeddings = []
     for i in tqdm(range(len(video_text_list))):

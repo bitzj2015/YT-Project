@@ -20,7 +20,8 @@ VERSION = "_rl_final_new2_cate_test4"
 FILTER = ""
 VERSION = "_reddit"
 FILTER = "_filter"
-VERSION = "_40"
+VERSION = "_reddit_40_new"
+VERSION = "_40_June"
 FILTER = ""
 
 with open(f"{root_path}/dataset/sock_puppets{VERSION}.json", "r") as json_file:
@@ -28,7 +29,7 @@ with open(f"{root_path}/dataset/sock_puppets{VERSION}.json", "r") as json_file:
 
 with open(f"{root_path}/dataset/video_ids{VERSION}.json", "r") as json_file:
     video_ids = json.load(json_file)
-
+print(len(video_ids))
 with open(f"{root_path}/dataset/category_ids_latest.json", "r") as json_file:
     cate_ids = json.load(json_file)
 
@@ -36,6 +37,26 @@ with open(f"{root_path}/dataset/video_metadata{VERSION}.json", "r") as json_file
     video_metadata = json.load(json_file)
 
 print(cate_ids)
+
+tag_dict = {}
+# cnt = 0
+# for video_id in video_metadata.keys():
+#     try:
+#         tags = video_metadata[video_id]["tags"].split(",")
+#         for tag in tags:
+#             if tag not in tag_dict.keys():
+#                 tag_dict[tag] = 0
+#             tag_dict[tag] += 1
+#     except:
+#         cnt += 1
+#         continue
+
+tag_dict = {k: v for k, v in sorted(tag_dict.items(), key=lambda item: item[1], reverse=True)}
+# print(cnt, len(tag_dict))
+for tag in tag_dict.keys():
+    if tag_dict[tag] > 100:
+        print(tag)
+
 
 def sample_false_label(
     label: list, 
@@ -110,10 +131,15 @@ for i in tqdm(range(len(data))):
     # Get video trails
     video_views = data[i]["viewed"]
     tmp[str(video_views)] = 1
+    tmp_view = []
     for video_id in video_views:
         # if video_id in video_ids.keys():
         input_data.append(video_ids[video_id])
         mask_data.append(1)
+        try:
+            tmp_view.append(video_metadata[video_id]["categories"])
+        except:
+            continue
 
     # Append -1 if the length of trail is smaller than max_trail_len
     if len(input_data) > 41:
@@ -164,17 +190,29 @@ for i in tqdm(range(len(data))):
             home_video_ids[video_id] += 1
 
     home_video_ids = {k : v for k, v in sorted(home_video_ids.items(), key=lambda item: item[1], reverse=True)}
-    last_label = [video_ids[video_id] for video_id in list(home_video_ids.keys())[0:topk_home]]
+    last_label = [video_ids[video_id] for video_id in list(home_video_ids.keys())[0:100]]
     last_label_p = [value for value in list(home_video_ids.values())[0:topk_home]]
     last_label_type = [1 for _ in range(len(last_label))]
-
-    for video_id in list(home_video_ids.keys())[0:topk_home]:
+    
+    tmp1 = []
+    tmp2 = []
+    for video_id in list(home_video_ids.keys())[0:]:
         try:
             last_cate[cate_ids[video_metadata[video_id]["categories"]]] += 1
+            tmp1.append(video_metadata[video_id]["categories"])
+            tmp2 += video_metadata[video_id]["tags"].split(",")
         except:
             num_video_missing_cate += 1
             continue
     last_cate_norm = [last_cate[i] / sum(last_cate) for i in range(len(last_cate))]
+    print(last_cate_norm)
+    # print(tmp_view)
+    print(tmp1)
+    # print(tmp2)
+    for tag in tmp2:
+        if tag not in tag_dict.keys():
+            tag_dict[tag] = 0
+        tag_dict[tag] += 1
 
     # Label_type: 0 -> true label, 1 -> false label
     last_label_type += [0 for _ in range(max_label_len * last_gain - len(last_label_type))]
@@ -203,64 +241,73 @@ for i in tqdm(range(len(data))):
     #     cnt += 1
     
 logger.info("Missing {} trails.".format(cnt))
+
+tag_dict = {k: v for k, v in sorted(tag_dict.items(), key=lambda item: item[1], reverse=True)}
+# print(cnt, len(tag_dict))
+for tag in tag_dict.keys():
+    if tag_dict[tag] > 100:
+        print(tag)
+
+with open("tags.json", "w") as json_file:
+    json.dump(tag_dict, json_file)
 # logger.info("Homepage No. recommended videos: {}".format(stat_len))
 
-idx = [i for i in range(len(input_data_all))]
-np.random.seed(0)
-np.random.shuffle(idx)
-print(len(tmp), num_video_missing_cate)
+# idx = [i for i in range(len(input_data_all))]
+# np.random.seed(0)
+# np.random.shuffle(idx)
+# print(len(tmp), num_video_missing_cate)
 
-train_size = int(len(idx) * 0.8)
-input_data_all = np.stack(input_data_all)
-label_data_all = np.stack(label_data_all)
-label_type_data_all = np.stack(label_type_data_all)
-last_label_all = np.stack(last_label_all)
-last_label_p_all = np.stack(last_label_p_all)
-last_label_type_all = np.stack(last_label_type_all)
-mask_data_all = np.stack(mask_data_all)
-last_cate_norm_all = np.stack(last_cate_norm_all)
+# train_size = int(len(idx) * 0.8)
+# input_data_all = np.stack(input_data_all)
+# label_data_all = np.stack(label_data_all)
+# label_type_data_all = np.stack(label_type_data_all)
+# last_label_all = np.stack(last_label_all)
+# last_label_p_all = np.stack(last_label_p_all)
+# last_label_type_all = np.stack(last_label_type_all)
+# mask_data_all = np.stack(mask_data_all)
+# last_cate_norm_all = np.stack(last_cate_norm_all)
 
-logger.info("Input: {}, label: {}, label_type: {}, mask: {}, last_label: {}, last_label_p: {}, last_label_type: {}, last_cate_norm: {}.".format(
-    np.shape(input_data_all), 
-    np.shape(label_data_all), 
-    np.shape(label_type_data_all), 
-    np.shape(mask_data_all),
-    np.shape(last_label_all),
-    np.shape(last_label_p_all),
-    np.shape(last_label_type_all),
-    np.shape(last_cate_norm_all))
-)
+# logger.info("Input: {}, label: {}, label_type: {}, mask: {}, last_label: {}, last_label_p: {}, last_label_type: {}, last_cate_norm: {}.".format(
+#     np.shape(input_data_all), 
+#     np.shape(label_data_all), 
+#     np.shape(label_type_data_all), 
+#     np.shape(mask_data_all),
+#     np.shape(last_label_all),
+#     np.shape(last_label_p_all),
+#     np.shape(last_label_type_all),
+#     np.shape(last_cate_norm_all))
+# )
 
-hf = h5py.File(f"{root_path}/dataset/train_data{VERSION}{FILTER}.hdf5", "w")
-hf.create_dataset('input', data=input_data_all[idx[:train_size]])
-hf.create_dataset('label', data=label_data_all[idx[:train_size]])
-hf.create_dataset('label_type', data=label_type_data_all[idx[:train_size]])
-hf.create_dataset('last_label', data=last_label_all[idx[:train_size]])
-hf.create_dataset('last_label_p', data=last_label_p_all[idx[:train_size]])
-hf.create_dataset('last_label_type', data=last_label_type_all[idx[:train_size]])
-hf.create_dataset('last_cate_norm', data=last_cate_norm_all[idx[:train_size]])
-hf.create_dataset('mask', data=mask_data_all[idx[:train_size]])
-hf.close()
+# hf = h5py.File(f"{root_path}/dataset/train_data{VERSION}{FILTER}.hdf5", "w")
+# hf.create_dataset('input', data=input_data_all[idx[:train_size]])
+# hf.create_dataset('label', data=label_data_all[idx[:train_size]])
+# hf.create_dataset('label_type', data=label_type_data_all[idx[:train_size]])
+# hf.create_dataset('last_label', data=last_label_all[idx[:train_size]])
+# hf.create_dataset('last_label_p', data=last_label_p_all[idx[:train_size]])
+# hf.create_dataset('last_label_type', data=last_label_type_all[idx[:train_size]])
+# hf.create_dataset('last_cate_norm', data=last_cate_norm_all[idx[:train_size]])
+# hf.create_dataset('mask', data=mask_data_all[idx[:train_size]])
+# hf.close()
 
-hf = h5py.File(f"{root_path}/dataset/test_data{VERSION}{FILTER}.hdf5", "w")
-hf.create_dataset('input', data=input_data_all[idx[train_size:]])
-hf.create_dataset('label', data=label_data_all[idx[train_size:]])
-hf.create_dataset('label_type', data=label_type_data_all[idx[train_size:]])
-hf.create_dataset('last_label', data=last_label_all[idx[train_size:]])
-hf.create_dataset('last_label_p', data=last_label_p_all[idx[train_size:]])
-hf.create_dataset('last_label_type', data=last_label_type_all[idx[train_size:]])
-hf.create_dataset('last_cate_norm', data=last_cate_norm_all[idx[train_size:]])
-hf.create_dataset('mask', data=mask_data_all[idx[train_size:]])
-hf.close()
+# hf = h5py.File(f"{root_path}/dataset/test_data{VERSION}{FILTER}.hdf5", "w")
+# hf.create_dataset('input', data=input_data_all[idx[train_size:]])
+# hf.create_dataset('label', data=label_data_all[idx[train_size:]])
+# hf.create_dataset('label_type', data=label_type_data_all[idx[train_size:]])
+# hf.create_dataset('last_label', data=last_label_all[idx[train_size:]])
+# hf.create_dataset('last_label_p', data=last_label_p_all[idx[train_size:]])
+# hf.create_dataset('last_label_type', data=last_label_type_all[idx[train_size:]])
+# hf.create_dataset('last_cate_norm', data=last_cate_norm_all[idx[train_size:]])
+# hf.create_dataset('mask', data=mask_data_all[idx[train_size:]])
+# hf.close()
 
-home_video_id = {}
-for i in range(train_size):
-    for j in range(sum(last_label_type_all[i])):
-        video_id = str(last_label_all[i][j])
-        if video_id not in home_video_id.keys():
-            home_video_id[video_id] = 0
-        home_video_id[video_id] += 1
+# home_video_id = {}
+# for i in range(train_size):
+#     for j in range(sum(last_label_type_all[i])):
+#         video_id = str(last_label_all[i][j])
+#         if video_id not in home_video_id.keys():
+#             home_video_id[video_id] = 0
+#         home_video_id[video_id] += 1
 
-home_video_id_sorted = {k: v for k, v in sorted(home_video_id.items(), key=lambda item: item[1], reverse=True)}
-with open(f"{root_path}/dataset/home_video_id_sorted{VERSION}{FILTER}.json", "w") as json_file:
-    json.dump(home_video_id_sorted, json_file)
+# home_video_id_sorted = {k: v for k, v in sorted(home_video_id.items(), key=lambda item: item[1], reverse=True)}
+# with open(f"{root_path}/dataset/home_video_id_sorted{VERSION}{FILTER}.json", "w") as json_file:
+#     json.dump(home_video_id_sorted, json_file)

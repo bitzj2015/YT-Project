@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 ALPHA = 0.2
 VERSION = "reddit_joint_cate_100_2"
 # VERSION = "reddit_new3_cate"
-PHASE = "train"
+VERSION = "latest_joint_cate_010_reddit2_0"
+PHASE = "test"
 with open(f"./results/{PHASE}_log_{ALPHA}_{VERSION}.json", "r") as json_file:
     data = json.load(json_file)["reward"]
 
