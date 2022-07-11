@@ -24,11 +24,17 @@ class Env(object):
         self.seed = seed
         self.id2video_map = id2video_map
         self.use_rand = use_rand
-        self.bias_weight = []
+        self.bias_weight = [0 for _ in range(self.env_args.action_dim)]
         self.video_set = [i for i in range(self.env_args.action_dim)]
         if self.use_rand == 2:
-            self.bias_weight = [1 / self.env_args.action_dim for _ in range(self.env_args.action_dim)]
-            self.prev_bias_weight = [i / sum(BIAS_WEIGHT) for i in BIAS_WEIGHT]
+            # self.bias_weight = [1 / self.env_args.action_dim for _ in range(self.env_args.action_dim)]
+            # self.prev_bias_weight = [i / sum(BIAS_WEIGHT) for i in BIAS_WEIGHT]
+            with open(f"./results/bias_weight_{self.env_args.alpha}_{VERSION}.json", "r") as json_file:
+                data = json.load(json_file)
+            self.bias_weight = list(data)
+            print(len(self.bias_weight))
+            sum_w = sum(self.bias_weight)
+            self.bias_weight = [i / sum_w for i in self.bias_weight]
 
     def start_env(self):
         # random.seed(self.seed)
@@ -66,6 +72,8 @@ class Env(object):
 
         # Get non-obfuscated recommendations
         self.cur_cate_base = self.yt_model.get_rec(self.base_state, topk=100)
+        
+        print(self.cur_cate[0], self.cur_cate_base[0], self.state.size(), self.base_state.size())
 
         # Get denoised non-obfuscated recommendations
         cur_cate_base_pred = self.denoiser.denoiser_model.get_rec(self.base_state, self.state, torch.from_numpy(self.cur_cate).to(self.env_args.device)) # input_vu, input_vo, label_ro
@@ -79,7 +87,7 @@ class Env(object):
         # Total rewards
         self.env_args.logger.info("KL distance of obfuscation: {}, denoiser: {}".format(np.mean(cur_reward_obfuscator), np.mean(cur_reward_denoiser)))
         cur_reward = [self.env_args.reward_w[0] * cur_reward_obfuscator[i] + self.env_args.reward_w[1] * cur_reward_denoiser[i] for i in range(len(self.workers))]
-        
+
         # Send reward back to worker
         ray.get([self.workers[i].update_reward.remote(cur_reward[i]) for i in range(len(self.workers))])
         self.cur_cate = list(self.cur_cate)
@@ -93,7 +101,7 @@ class Env(object):
             return np.random.choice(self.video_set, len(self.workers))
         elif self.use_rand == 2:
             # normalized_bias_weight = [item / sum(self.bias_weight) for item in self.bias_weight]
-            return np.random.choice(self.video_set, len(self.workers), p=self.prev_bias_weight)
+            return np.random.choice(self.video_set, len(self.workers), p=self.bias_weight)
             
     def get_state_from_workers(self):
         self.state = np.stack(ray.get([worker.get_state.remote(self.env_args.his_len) for worker in self.workers]))
@@ -122,7 +130,7 @@ class Env(object):
                     break
                 self.send_reward_to_workers()
                 self.update_rl_agent(reward_only=True)
-                if self.use_rand == 2:
+                if self.use_rand == 1:
                     rewards = self.get_reward_gain_from_workers()
                     for i in range(len(obfuscation_videos)):
                         self.bias_weight[obfuscation_videos[i]] += max(0, rewards[i])
@@ -142,7 +150,8 @@ class Env(object):
 
     def update_rl_agent(self, reward_only=True):
         if reward_only:
-            self.rl_agent.update_rewards(self.get_reward_gain_from_workers())
+            ret = self.get_reward_gain_from_workers()
+            self.rl_agent.update_rewards(ret)
         else:
             loss, _ = self.rl_agent.update_model()
             self.rl_agent.clear_actions()
@@ -156,9 +165,9 @@ class Env(object):
         self.cur_cate_base = []
         self.cur_cate = []
         self.env_args.logger.info("clear env")
-        if save_param:
+        if save_param and self.use_rand == 0:
             self.rl_agent.save_param()
             self.env_args.logger.info("save rl agent")
-        # if self.use_rand == 2:
-        #     with open(f"./results/bias_weight_new.json", "w") as json_file:
-        #         json.dump(self.bias_weight, json_file)
+        if save_param and self.use_rand == 1:
+            with open(f"./results/bias_weight_{self.env_args.alpha}_{VERSION}.json", "w") as json_file:
+                json.dump(self.bias_weight, json_file)

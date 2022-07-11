@@ -78,7 +78,7 @@ class Agent(object):
             entropy = -(log_prob * prob).sum(1)
             self.entropies.append(entropy)
             action = prob.multinomial(num_samples=1).data
-            # print(action.view(-1))
+            print(action.view(-1))
             log_prob = log_prob.gather(1, action)
             self.log_probs.append(log_prob.squeeze(1))
             return action.view(-1).tolist()
@@ -89,6 +89,7 @@ class Agent(object):
 
     def update_rewards(self, rewards):
         rewards = torch.from_numpy(rewards).to(self.env_args.device)
+        # print(rewards.size())
         self.rewards.append(rewards)
 
     def update_model(self, retrain=False):
@@ -106,7 +107,9 @@ class Agent(object):
         R = self.values[-1]
         if len(self.rewards) == 0:
             return 0, 0
+
         for i in reversed(range(len(self.rewards))):
+            # print(i, self.rewards[i].size())
             avg_R += self.rewards[i]
             R = GAMMA * R + self.rewards[i]
             advantage = R - self.values[i]
@@ -119,7 +122,7 @@ class Agent(object):
                     0.01 * self.entropies[i]
         self.optimizer.zero_grad()
 
-        loss = policy_loss.sum() + 0.5 * value_loss.sum(0)
+        loss = policy_loss.sum() + 0.5 * 100 * value_loss.sum(0)
         print("loss: {}, {};".format(policy_loss.sum().item(), value_loss.sum(0).item()))
         loss.backward(retain_graph=True)
         torch.nn.utils.clip_grad_norm(self.model.parameters(), 100)

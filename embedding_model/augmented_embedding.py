@@ -74,8 +74,8 @@ for idx in sorted(id_videos.keys()):
         video2channel[video_id] = ""
 
 print(category_ids)
-# with open(f"{root_path}/dataset/category_ids_latest.json", "w") as json_file:
-#     json.dump(category_ids, json_file)
+with open(f"{root_path}/dataset/category_ids_latest.json", "w") as json_file:
+    json.dump(category_ids, json_file)
     
 categories = np.array(categories)
 average_ratings = np.array(average_ratings)

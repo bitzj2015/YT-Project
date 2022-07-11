@@ -64,6 +64,7 @@ yt_model.device = device
 yt_model.video_embeddings = video_embeddings.to(device)
 yt_model.graph_embeddings.device = device
 yt_model.graph_embeddings.aggregator.device = device
+yt_model.graph_embeddings.video_embeddings = video_embeddings.to(device)
 yt_model.eval()
 rl_model = A2Clstm(env_args, video_embeddings).to(device)
 rl_optimizer = optim.Adam(rl_model.parameters(), lr=env_args.rl_lr)
@@ -90,7 +91,7 @@ if not args.eval:
 
     # Initialize envrionment and workers
     workers = [RolloutWorker.remote(env_args, i) for i in range(env_args.num_browsers)]
-    env = Env(env_args, yt_model, denoiser, rl_agent, workers, seed=0, id2video_map=ID2VIDEO)
+    env = Env(env_args, yt_model, denoiser, rl_agent, workers, seed=0, id2video_map=ID2VIDEO, use_rand=args.use_rand)
     
     # Start RL agent training loop
     losses = []
@@ -102,10 +103,11 @@ if not args.eval:
     best_reward = -100
     torch.save(env.denoiser.denoiser_model.state_dict(), args.denoiser_path)
     for ep in range(50):
+        n_steps = train_inputs.shape[0] // env_args.num_browsers
+        '''
         # Update denoiser
         base_persona, obfu_persona, base_rec, obfu_rec = [], [], [] ,[]
         max_len = 0
-        n_steps = train_inputs.shape[0] // env_args.num_browsers
         env.rl_agent.eval()
         for i in range(n_steps):
             # for j in range(env_args.num_browsers):
@@ -118,7 +120,7 @@ if not args.eval:
             obfu_persona += env.all_watch_history
             base_rec += env.cur_cate_base
             obfu_rec += env.cur_cate
-            print(ep, env.all_watch_history_base[0])
+            # print(ep, env.all_watch_history_base[0])
             env.stop_env(save_param=False)
             
             
@@ -135,6 +137,7 @@ if not args.eval:
             env.update_denoiser(denoiser_test_loader, train_denoiser=False)
         except:
             env_args.logger.info(f"Testing denoiser failed")
+        '''
 
         # Update obfuscator (rl agent)
         env.rl_agent.train()
@@ -192,6 +195,7 @@ else:
     # Load pretrained rl agent
     env_args.logger.info("loading model parameters")
     rl_agent.model.load_state_dict(torch.load(args.agent_path, map_location=device))
+    rl_agent.model.video_embeddings = video_embeddings.to(device)
     
     
     # Initialize envrionment and workers

@@ -92,7 +92,7 @@ policy_net = PolicyNetRegression(
 
 
 optimizer = optim.Adam(policy_net.parameters(), lr=args.lr)
-best_acc = -1000
+best_acc = 1000
 if args.eval == False:
     for ep in range(args.epoch):
         # State tracker
@@ -108,8 +108,8 @@ if args.eval == False:
         stat = run_regression_epoch(model=policy_net, dataloader=val_loader, mode="test", optimizer=optimizer, ep=ep, stat=stat, logger=logger, use_graph=args.use_graph)
 
         # Save model
-        if stat["test_last_acc"] > best_acc:
-            best_acc = stat["test_last_acc"]
+        if stat["test_last_acc_ch"] < best_acc:
+            best_acc = stat["test_last_acc_ch"]
             torch.save(policy_net, "./param/policy_{}.pt".format(args.version))
 else:
     # State tracker

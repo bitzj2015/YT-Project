@@ -20,11 +20,16 @@ VERSION = "_rl_final_new2_cate_test4"
 FILTER = ""
 VERSION = "_reddit"
 FILTER = "_filter"
+<<<<<<< HEAD
 VERSION = "_reddit_40_new"
 VERSION = "_40_June"
+=======
+VERSION = "_40_large"
+# VERSION = "_reddit_40"
+>>>>>>> 8e8cbd47a3f3fba38976fcdf7e462c1cda99f781
 FILTER = ""
 
-with open(f"{root_path}/dataset/sock_puppets{VERSION}.json", "r") as json_file:
+with open(f"{root_path}/dataset/sock_puppets_40.json", "r") as json_file:
     data = json.load(json_file)[2]["data"]
 
 with open(f"{root_path}/dataset/video_ids{VERSION}.json", "r") as json_file:
