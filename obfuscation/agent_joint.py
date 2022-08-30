@@ -119,10 +119,10 @@ class Agent(object):
                 self.values[i].data
             gae = gae * GAMMA * T + delta_t
             policy_loss = policy_loss - self.log_probs[i] * gae -\
-                    0.01 * self.entropies[i]
+                    0.1 * self.entropies[i]
         self.optimizer.zero_grad()
 
-        loss = policy_loss.sum() + 0.5 * 100 * value_loss.sum(0)
+        loss = policy_loss.sum() + 0.01 * value_loss.sum(0)
         print("loss: {}, {};".format(policy_loss.sum().item(), value_loss.sum(0).item()))
         loss.backward(retain_graph=True)
         torch.nn.utils.clip_grad_norm(self.model.parameters(), 100)

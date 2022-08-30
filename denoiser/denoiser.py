@@ -35,10 +35,10 @@ class DenoiserNet(torch.nn.Module):
         ).to(self.device)
 
         # Used to encode obfuscated recommended video distribution
-        self.linear_ro = nn.Linear(17, hidden_dim).to(self.device)
+        self.linear_ro = nn.Linear(154, hidden_dim).to(self.device)
 
         # Used to predict non-obfuscated recommended video distribution
-        self.linear_ru = nn.Linear(hidden_dim * 3, 17).to(self.device)
+        self.linear_ru = nn.Linear(hidden_dim * 3, 154).to(self.device)
 
         # Others
         # self.graph_embeddings = graph_embeddings

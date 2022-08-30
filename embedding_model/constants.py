@@ -1,2 +1,2 @@
 root_path = "/scratch/YT_dataset"
-root_path = "/project/kpsounis_171"
+# root_path = "/project/kpsounis_171"

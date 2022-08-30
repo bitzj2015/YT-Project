@@ -24,6 +24,12 @@ video_ids = dict(zip(video_stat.keys(), [i for i in range(len(video_stat.keys())
 with open(f"{root_path}/dataset/video_ids{VERSION}.json", "w") as json_file:
     json.dump(video_ids, json_file)
 
+with open(f"{root_path}/dataset/topic/tag2class{VERSION}2.json", "r") as json_file:
+    tag2class = json.load(json_file)
+
+with open(f"{root_path}/dataset/topic/class2id2.json", "r") as json_file:
+    class2id = json.load(json_file)
+
 categories = []
 view_counts = []
 average_ratings = []
@@ -41,18 +47,21 @@ video2channel = {}
 channel2video = {}
 for idx in sorted(id_videos.keys()):
     video_id = id_videos[idx]
+    category = [0 for _ in range(len(class2id))]
     try:
-        cate = video_metadata[video_id]["categories"]
-        if cate != "":
-            if  not LOAD_METADATA:
-                if  cate not in category_ids.keys():
-                    category_ids[cate] = category_ids["*"]
-                    category_ids["*"] += 1
-            categories.append(category_ids[cate])
-        else:
-            categories.append(0)
+        tags = video_metadata[video_id]["tags"].split(",")
+        for tag in tags:
+            if tag == "":
+                continue
+
+            c = class2id[tag2class[tag][0]]
+            conf = tag2class[tag][1]
+            if conf > 0:
+                category[c] = 1
+
     except:
-        categories.append(0)
+        category = [0 for _ in range(len(class2id))]
+    categories.append(category)
     
     try:
         view_counts.append(int(video_metadata[video_id]["view_count"]))
@@ -81,9 +90,9 @@ categories = np.array(categories)
 average_ratings = np.array(average_ratings)
 view_counts = np.array(view_counts)
 
-max_cate = np.max(categories) + 2
-I = np.eye(max_cate)
-one_hot_categories = I[categories]
+# max_cate = np.max(categories) + 2
+# I = np.eye(max_cate)
+# one_hot_categories = I[categories]
 
 if LOAD_METADATA:
     average_ratings = (average_ratings - mean_average_ratings) / (std_average_ratings + 1e-10)
@@ -106,36 +115,19 @@ else:
     print(np.mean(view_counts), np.std(view_counts), np.max(view_counts), np.min(view_counts))
 
 
+with h5py.File(f"{root_path}/dataset/video_embeddings{VERSION}.hdf5", "r") as hf:
+    embeddings = hf["embeddings"][:]
+    videoIds = hf["video_ids"][:]
+print(embeddings.shape)
+print(isinstance(embeddings[0][0], np.float32))
+augmented_embeddings = np.concatenate([embeddings, categories, average_ratings.reshape(-1,1), view_counts.reshape(-1, 1)], axis=1)
+print(augmented_embeddings.shape)
 
-
-# with h5py.File(f"{root_path}/dataset/video_embeddings{VERSION}.hdf5", "r") as hf:
-#     embeddings = hf["embeddings"][:]
-#     videoIds = hf["video_ids"][:]
-# print(embeddings.shape)
-# print(isinstance(embeddings[0][0], np.float32))
-# augmented_embeddings = np.concatenate([embeddings, one_hot_categories, average_ratings.reshape(-1,1), view_counts.reshape(-1, 1)], axis=1)
-# print(augmented_embeddings.shape)
-
-# hf = h5py.File(f"{root_path}/dataset/video_embeddings{VERSION}_aug.hdf5", "w")
-# hf.create_dataset('embeddings', data=augmented_embeddings.astype("float32"))
-# hf.create_dataset('video_ids', data=videoIds)
-# hf.close()
-# print(isinstance(augmented_embeddings[0][0], np.float32))
-
-# with open(f"{root_path}/dataset/video_video_edge{VERSION}_w.json", "r") as json_file:
-#     video_video_edge = json.load(json_file)
-
-# video_adj_list = dict(zip([i for i in range(len(video_ids.keys()))], [{} for _ in range(len(video_ids.keys()))]))
-# for video_id in tqdm(video_video_edge.keys()):
-#     for recvideo_id in video_video_edge[video_id].keys():
-#         video_adj_list[video_ids[video_id]][video_ids[recvideo_id]] = video_video_edge[video_id][recvideo_id]
-#     channel_id = video2channel[video_id]
-#     if channel_id != "":
-#         for same_ch_video in channel2video[channel_id].keys():
-#             video_adj_list[video_ids[video_id]][video_ids[same_ch_video]] = 1 
-# print(len(channel2video.keys()))
-# with open(f"{root_path}/dataset/video_adj_list{VERSION}_w_aug.json", "w") as json_file:
-#     json.dump(video_adj_list, json_file)
+hf = h5py.File(f"{root_path}/dataset/video_embeddings{VERSION}_aug2.hdf5", "w")
+hf.create_dataset('embeddings', data=augmented_embeddings.astype("float32"))
+hf.create_dataset('video_ids', data=videoIds)
+hf.close()
+print(isinstance(augmented_embeddings[0][0], np.float32))
 
 with open(f"{root_path}/dataset/video2channel{VERSION}.json", "w") as json_file:
     json.dump(video2channel, json_file)

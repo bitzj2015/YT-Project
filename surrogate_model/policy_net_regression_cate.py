@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from constants import *
-import math
+from sklearn.metrics import precision_recall_fscore_support
 
 
 class PolicyNetRegression(torch.nn.Module):
@@ -16,10 +16,10 @@ class PolicyNetRegression(torch.nn.Module):
             hidden_size=hidden_dim,
             num_layers=2,
             bidirectional=False,
-            dropout=0.4,
+            dropout=0.2,
             batch_first=True
         ).to(self.device)
-        self.linear = nn.Linear(hidden_dim, 17).to(self.device)
+        self.linear = nn.Linear(hidden_dim, 154).to(self.device)
         # self.linear2 = nn.Linear(emb_dim, emb_dim).to(self.device)
         self.num_user_state = num_user_state
         self.graph_embeddings = graph_embeddings
@@ -31,6 +31,8 @@ class PolicyNetRegression(torch.nn.Module):
         self.tanh = nn.Tanh().to(self.device)
         self.relu = nn.ReLU().to(self.device)
         self.train()
+        self.w = torch.Tensor(CLASS_WEIGHT).to(self.device).reshape(1, -1)
+        self.kl_loss = nn.KLDivLoss(reduction="batchmean")
 
     def get_rec(self, inputs, with_graph=False, topk=100):
         batch_size, seq_len = inputs.shape
@@ -40,12 +42,58 @@ class PolicyNetRegression(torch.nn.Module):
         for i in range(batch_size):
             outputs.append(out[i][-1])
         outputs = torch.stack(outputs, dim=0).squeeze()
-        outputs = self.relu(self.linear(outputs))
-        outputs = F.softmax(outputs, -1)
-        emb = outputs.detach()
+        # outputs = self.relu(self.linear(outputs))
+        # outputs = F.softmax(outputs, -1)
+        # emb = outputs.detach()
+        outputs = torch.sigmoid(self.linear(outputs))
+        emb = (outputs >= 0.5).int()
          
         return emb.cpu().numpy()
 
+    def forward(self, inputs, label, mask, with_graph=False):
+
+        batch_size, seq_len = inputs.shape
+        inputs = inputs * mask
+        inputs = self.graph_embeddings(inputs.reshape(-1).tolist(), with_graph).reshape(batch_size, seq_len, self.emb_dim)
+        mask = mask.unsqueeze(2)
+
+        last_label = label.to(self.device)
+        # last_label_type = label_type.to(self.device)
+        mask = mask.to(self.device)
+
+        batch_size, _ = last_label.shape
+
+        # batch_size * seq_len * emb_dim -> batch_size * seq_len * hidden_dim
+        out, _ = self.lstm(inputs)
+        # print(last_hidden.size())
+        # outputs = last_hidden[-1]
+        
+        outputs = []
+        for i in range(len(mask)):
+            outputs.append(out[i][sum(mask[i]) - 1])
+        outputs = torch.stack(outputs, dim=0).squeeze()
+        
+        # batch_size * hidden_dim -> batch_size * num_classes
+        # outputs = self.relu(self.linear(outputs))
+        # outputs = F.log_softmax(outputs, -1)
+        # loss = self.kl_loss(outputs, label)
+        # # print(self.kl_loss(torch.log(label[:-10] + 1e-7), label[10:]))
+
+        # return loss, 0, batch_size, 0, 0, 0
+
+        
+        outputs = torch.sigmoid(self.linear(outputs))
+        loss = label * torch.log(outputs) + (1 - label) * torch.log(1 - outputs)
+        loss = -loss.mean()
+        pred = (outputs >= 0.5).int()
+        acc = (pred == label).sum() / (label.size(0) * label.size(1))
+        haming_dis = torch.abs(pred - label).sum(-1) / 20
+        precision, recall, f1, _ = precision_recall_fscore_support(pred.reshape(-1).numpy(), label.reshape(-1).numpy())
+        print(haming_dis.mean())
+
+        return loss, acc, batch_size, f1[1], precision[1], recall[1]
+
+        '''
     def forward(self, inputs, label, label_cate, label_type, mask, with_graph=False):
 
         batch_size, seq_len = inputs.shape
@@ -55,7 +103,7 @@ class PolicyNetRegression(torch.nn.Module):
 
         last_label = label.to(self.device)
         last_cate = label_cate.to(self.device)
-        last_label_type = label_type.to(self.device)
+        # last_label_type = label_type.to(self.device)
         mask = mask.to(self.device)
 
         batch_size, _ = last_label.shape
@@ -99,3 +147,4 @@ class PolicyNetRegression(torch.nn.Module):
             
         # print(label_map)
         return -logits * 0.5, -logits * 0.5, -last_acc, batch_size, avg_kl_distance
+        '''

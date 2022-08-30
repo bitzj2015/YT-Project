@@ -17,12 +17,12 @@ VERSION = "final_joint_cate_103_2_test"
 VERSION = "reddit_40"
 VERSION = "latest_joint_cate_010"
 VERSION = "40"
-VERSION = "latest_joint_cate_010_0.1"
-VERSION = "reddit_40_new"
-VERSION = "latest_joint_cate_010_reddit3_0.2"
-VERSION = "latest_joint_cate_010_0.3"
-VERSION = "40_June"
-VERSION = "realuser"
+# VERSION = "latest_joint_cate_010_0.1"
+# VERSION = "reddit_40_new"
+# VERSION = "latest_joint_cate_010_reddit3_0.2"
+# VERSION = "latest_joint_cate_010_0.3"
+# VERSION = "40_June"
+# VERSION = "realuser"
 
 # VERSION = "reddit_cate_100_2_test"
 parser = argparse.ArgumentParser(description='get metadata.')
@@ -64,7 +64,7 @@ def get_metadata(video_id_list: list):
     for video_id in tqdm(video_id_list):
         try:
             url = 'https://youtube.com/watch?v=%s' % video_id
-            if os.path.exists(f"{metadata_root_path}/{video_id}.json"):
+            if os.path.exists(f"{metadata_root_path}/{video_id}.json") and False:
                 js = json.load(open(f"{metadata_root_path}/{video_id}.json", "r"))
             else:
                 js = json.loads(subprocess.run(['/usr/local/bin/youtube-dl', '-J', url], stdout=subprocess.PIPE).stdout)

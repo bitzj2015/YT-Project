@@ -3,6 +3,7 @@ import numpy as np
 import math
 
 root_path = "/project/kpsounis_171"
+root_path = "/scratch/YT_dataset"
 # VERSION = "final"
 # TAG = "_filter"
 VERSION = "40_June"

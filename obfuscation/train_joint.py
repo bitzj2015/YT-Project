@@ -31,7 +31,7 @@ args = parser.parse_args()
 
 logging.basicConfig(
     filename=f"./logs/log_train_regression_{args.alpha}_{args.version}.txt",
-    filemode='a',
+    filemode='w',
     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
     datefmt='%H:%M:%S',
     level=logging.INFO
@@ -57,6 +57,8 @@ yt_model = torch.load(
     map_location=device
 ).to(device)
 
+
+print(video_embeddings.shape)
 # Define environment configuration and rl agent
 env_args = EnvConfig(action_dim=video_embeddings.shape[0], device=device, agent_path=args.agent_path, alpha=args.alpha, logger=logger, version=args.version)
 video_embeddings = torch.from_numpy(video_embeddings).to(env_args.device)

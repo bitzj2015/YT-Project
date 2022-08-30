@@ -73,16 +73,18 @@ class Env(object):
         # Get non-obfuscated recommendations
         self.cur_cate_base = self.yt_model.get_rec(self.base_state, topk=100)
         
-        print(self.cur_cate[0], self.cur_cate_base[0], self.state.size(), self.base_state.size())
+        print(self.state.size(), self.base_state.size())
 
         # Get denoised non-obfuscated recommendations
-        cur_cate_base_pred = self.denoiser.denoiser_model.get_rec(self.base_state, self.state, torch.from_numpy(self.cur_cate).to(self.env_args.device)) # input_vu, input_vo, label_ro
+        # cur_cate_base_pred = self.denoiser.denoiser_model.get_rec(self.base_state, self.state, torch.from_numpy(self.cur_cate).to(self.env_args.device)) # input_vu, input_vo, label_ro
 
         # Reward for obfuscator
-        cur_reward_obfuscator = [kl_divergence(self.cur_cate_base[i], self.cur_cate[i]) for i in range(len(self.workers))]
+        # cur_reward_obfuscator = [kl_divergence(self.cur_cate_base[i], self.cur_cate[i]) for i in range(len(self.workers))]
+        cur_reward_obfuscator = [((self.cur_cate_base[i] - self.cur_cate[i]) ** 2).sum() for i in range(len(self.workers))]
 
         # Reward for denoiser
-        cur_reward_denoiser = [-kl_divergence(self.cur_cate_base[i], cur_cate_base_pred[i]) for i in range(len(self.workers))]
+        # cur_reward_denoiser = [-kl_divergence(self.cur_cate_base[i], cur_cate_base_pred[i]) for i in range(len(self.workers))]
+        cur_reward_denoiser = [0 for i in range(len(self.workers))]
 
         # Total rewards
         self.env_args.logger.info("KL distance of obfuscation: {}, denoiser: {}".format(np.mean(cur_reward_obfuscator), np.mean(cur_reward_denoiser)))

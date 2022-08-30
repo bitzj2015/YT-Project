@@ -17,6 +17,7 @@ class PolicyNetRegression(torch.nn.Module):
             dropout=0.2,
             batch_first=True
         ).to(self.device)
+        
         self.linear = nn.Linear(hidden_dim, emb_dim * 5).to(self.device)
         self.linear2 = nn.Linear(hidden_dim, emb_dim * num_user_state).to(self.device)
         self.num_user_state = num_user_state

@@ -17,7 +17,7 @@ parser.add_argument('--video-id', dest="video_id_path", type=str, default=f"{ROO
 parser.add_argument('--train-data', dest="train_data_path", type=str, default=f"{ROOT_PATH}/dataset/train_data_{VERSION}{TAG}.hdf5")
 parser.add_argument('--test-data', dest="test_data_path", type=str, default=f"{ROOT_PATH}/dataset/test_data_{VERSION}{TAG}.hdf5")
 parser.add_argument('--ep', dest="epoch", type=int, default=30)
-parser.add_argument('--bs', dest="batch_size", type=int, default=256)
+parser.add_argument('--bs', dest="batch_size", type=int, default=32)
 parser.add_argument('--lr', dest="lr", type=float, default=0.001)
 parser.add_argument('--use-graph', dest="use_graph", default=False, action='store_true')
 parser.add_argument('--add-edge', dest="add_edge", default=False, action='store_true')
@@ -108,8 +108,8 @@ if args.eval == False:
         stat = run_regression_epoch(model=policy_net, dataloader=val_loader, mode="test", optimizer=optimizer, ep=ep, stat=stat, logger=logger, use_graph=args.use_graph)
 
         # Save model
-        if stat["test_last_acc_ch"] < best_acc:
-            best_acc = stat["test_last_acc_ch"]
+        if stat["test_loss_pos"] < best_acc:
+            best_acc = stat["test_loss_pos"]
             torch.save(policy_net, "./param/policy_{}.pt".format(args.version))
 else:
     # State tracker

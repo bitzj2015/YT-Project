@@ -45,6 +45,78 @@ def load_dataset(
         train_dataset = YTDataset(
             train_hf["input"][:], train_hf["label"][:], 
             train_hf["label_type"][:], train_hf["mask"][:], 
+            train_hf["last_label"][:], train_hf["last_label_type"][:],
+            transform=ToTensor()
+        )
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+    with  h5py.File(test_data_path, "r") as test_hf:
+        dataset = YTDataset(
+            test_hf["input"][:], test_hf["label"][:], 
+            test_hf["label_type"][:], test_hf["mask"][:], 
+            test_hf["last_label"][:], test_hf["last_label_type"][:],
+            transform=ToTensor()
+        )
+        dataset_size = len(dataset)
+        print(dataset_size)
+        val_dataset_size = int(0.5 * dataset_size)
+        test_dataset_size = dataset_size - val_dataset_size
+        test_dataset, val_dataset = torch.utils.data.random_split(dataset, [test_dataset_size, val_dataset_size], generator=torch.Generator().manual_seed(0))
+        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+        
+    return train_loader, test_loader, val_loader
+
+
+def run_regression_epoch(model, dataloader, mode="train", optimizer=None, ep=0, stat=None, logger=None, use_graph=False):
+    for i, batch in tqdm(enumerate(dataloader)):
+        # Get data
+        input, mask = batch["input"], batch["mask"]
+        last_label = batch["last_label"].float()
+        logger.debug(input.size(), mask.size(), last_label.size())
+
+        if mode == "train":
+            # Forward computation and back propagation
+            start_time = time.time()
+            model.train()
+            optimizer.zero_grad()
+            loss, acc, last_count, f1, precision, recall = model(input, last_label, mask, with_graph=use_graph)
+            print("forward:", time.time()-start_time)
+            loss.backward()
+            optimizer.step()
+            print("backward:", time.time()-start_time)
+ 
+        else:
+            # Forward computation 
+            model.eval()
+            loss, acc, last_count, f1, precision, recall = model(input, last_label, mask, with_graph=use_graph)
+            
+        # Print training results
+        stat[f"{mode}_last_acc"] += acc * last_count
+        stat[f"{mode}_last_count"] += last_count
+        stat[f"{mode}_loss_pos"] += loss.item() * last_count
+        stat[f"{mode}_loss_neg"] += f1 * last_count
+        logger.info("{}ing, ep: {}, step: {}, loss: {}, home_acc: {}, home_f1: {}.".format(mode, ep, i, loss.item(), acc, (f1, precision, recall)))
+    
+    # Print final training results
+    stat[f"{mode}_last_acc"] /= stat[f"{mode}_last_count"]
+    stat[f"{mode}_loss_pos"] /= stat[f"{mode}_last_count"]
+    stat[f"{mode}_loss_neg"] /= stat[f"{mode}_last_count"]
+    logger.info("End {}ing, ep: {}, loss: {}, home_acc: {}, home_f1: {}".format(mode, ep, stat[f"{mode}_loss_pos"], stat[f"{mode}_last_acc"], stat[f"{mode}_loss_neg"]))
+    return stat
+
+'''
+def load_dataset(
+    train_data_path="../dataset/train_data.hdf5",
+    test_data_path="../dataset/test_data.hdf5",
+    batch_size=256,
+    logger=None
+):
+    # try:
+    with h5py.File(train_data_path, "r") as train_hf:
+        train_dataset = YTDataset(
+            train_hf["input"][:], train_hf["label"][:], 
+            train_hf["label_type"][:], train_hf["mask"][:], 
             train_hf["last_label"][:], train_hf["last_label_p"][:], train_hf["last_label_type"][:], 
             train_hf["last_cate_norm"][:],
             transform=ToTensor()
@@ -66,11 +138,8 @@ def load_dataset(
         test_dataset, val_dataset = torch.utils.data.random_split(dataset, [test_dataset_size, val_dataset_size], generator=torch.Generator().manual_seed(0))
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-    return train_loader, test_loader, val_loader
-    # except:
-    #     logger.error("Failed to load training and testing dataset.")
-    #     return None, None
 
+    return train_loader, test_loader, val_loader
 
 def run_regression_epoch(model, dataloader, mode="train", optimizer=None, ep=0, stat=None, logger=None, use_graph=False):
     for i, batch in tqdm(enumerate(dataloader)):
@@ -117,3 +186,5 @@ def run_regression_epoch(model, dataloader, mode="train", optimizer=None, ep=0, 
     stat[f"{mode}_loss_neg"] /= stat[f"{mode}_last_count"]
     logger.info("End {}ing, ep: {}, loss_pos: {}, loss_neg: {}, home_acc: {}, ch_acc: {}.".format(mode, ep, stat[f"{mode}_loss_pos"], stat[f"{mode}_loss_neg"], stat[f"{mode}_last_acc"], stat[f"{mode}_last_acc_ch"]))
     return stat
+
+'''
