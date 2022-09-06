@@ -72,7 +72,7 @@ for video_id in video_metadata.keys():
                 video2class[video_id].append(c)
 
         cnt += 1
-        if cnt < 10:
+        if cnt < 5:
             print("***************")
             print("Video id: ", video_id)
             print("Tags: ", tags)
@@ -227,12 +227,13 @@ for i in tqdm(range(len(data))):
 
     last_cate_dict = {k : v for k, v in sorted(last_cate_dict.items(), key=lambda item: item[1], reverse=True)}
     
-    if i % 100 == 0:
+    if i % 1000 == 0:
         print(last_cate_dict)
 
     # last_cate_dict = list(last_cate_dict.keys())[:20]
 
     total_f = sum(list(last_cate_dict.values()))
+    print(len(last_cate_dict))
     for cate in last_cate_dict.keys():
         last_label[class2id[cate]] = last_cate_dict[cate] / total_f
 

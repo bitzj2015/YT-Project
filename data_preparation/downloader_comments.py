@@ -69,7 +69,7 @@ def download_comments(youtube_id, sort_by=SORT_BY_RECENT, sleep=.1, proxy=''):
         return # Unable to extract configuration
 
     data = json.loads(regex_search(html, YT_INITIAL_DATA_RE, default=''))
-    section = next(search_dict(data, 'itemSectionRenderer'), None)
+    section = next(search_dict(data['contents'], 'itemSectionRenderer'), None)
     renderer = next(search_dict(section, 'continuationItemRenderer'), None) if section else None
     if not renderer:
         # Comments disabled?
@@ -83,8 +83,10 @@ def download_comments(youtube_id, sort_by=SORT_BY_RECENT, sleep=.1, proxy=''):
         # print(response)
         if not response:
             break
-        if list(search_dict(response, 'externalErrorMessage')):
-            raise RuntimeError('Error returned from server: ' + next(search_dict(response, 'externalErrorMessage')))
+
+        error = next(search_dict(response, 'externalErrorMessage'), None)
+        if error:
+            raise RuntimeError('Error returned from server: ' + error)
 
         if needs_sorting:
             sort_menu = next(search_dict(response, 'sortFilterSubMenuRenderer'), {}).get('subMenuItems', [])
@@ -107,13 +109,14 @@ def download_comments(youtube_id, sort_by=SORT_BY_RECENT, sleep=.1, proxy=''):
         
         for comment in reversed(list(search_dict(response, 'commentRenderer'))):
             yield {'cid': comment['commentId'],
-                   'text': ''.join([c['text'] for c in comment['contentText'].get('runs', [])]),
-                   'time': comment['publishedTimeText']['runs'][0]['text'],
-                   'author': comment.get('authorText', {}).get('simpleText', ''),
-                   'channel': comment['authorEndpoint']['browseEndpoint'].get('browseId', ''),
-                   'votes': comment.get('voteCount', {}).get('simpleText', '0'),
-                   'photo': comment['authorThumbnail']['thumbnails'][-1]['url'],
-                   'heart': next(search_dict(comment, 'isHearted'), False)}
+                    'text': ''.join([c['text'] for c in comment['contentText'].get('runs', [])]),
+                    'time': comment['publishedTimeText']['runs'][0]['text'],
+                    'author': comment.get('authorText', {}).get('simpleText', ''),
+                    'channel': comment['authorEndpoint']['browseEndpoint'].get('browseId', ''),
+                    'votes': comment.get('voteCount', {}).get('simpleText', '0'),
+                    'photo': comment['authorThumbnail']['thumbnails'][-1]['url'],
+                    'heart': next(search_dict(comment, 'isHearted'), False),
+                    'reply': '.' in comment['commentId']}
 
         time.sleep(sleep)
 

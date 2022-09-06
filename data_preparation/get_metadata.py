@@ -15,14 +15,15 @@ VERSION = "final_with_graph"
 VERSION = "final_joint_cate_100_2_0.1"
 VERSION = "final_joint_cate_103_2_test"
 VERSION = "reddit_40"
-VERSION = "latest_joint_cate_010"
-VERSION = "40"
+# VERSION = "latest_joint_cate_010"
+# VERSION = "40"
 # VERSION = "latest_joint_cate_010_0.1"
 # VERSION = "reddit_40_new"
-# VERSION = "latest_joint_cate_010_reddit3_0.2"
-# VERSION = "latest_joint_cate_010_0.3"
+VERSION = "latest_joint_cate_010_reddit3_0.2"
+# VERSION = "latest_joint_cate_010"
 # VERSION = "40_June"
-# VERSION = "realuser"
+VERSION = "v1_binary_0.2_test"
+VERSION = "realuser_0.2_test_v2"
 
 # VERSION = "reddit_cate_100_2_test"
 parser = argparse.ArgumentParser(description='get metadata.')
@@ -64,9 +65,13 @@ def get_metadata(video_id_list: list):
     for video_id in tqdm(video_id_list):
         try:
             url = 'https://youtube.com/watch?v=%s' % video_id
-            if os.path.exists(f"{metadata_root_path}/{video_id}.json") and False:
+            recrawl = False
+            if os.path.exists(f"{metadata_root_path}/{video_id}.json"):
                 js = json.load(open(f"{metadata_root_path}/{video_id}.json", "r"))
-            else:
+                if "tags" not in js.keys():
+                    recrawl = True
+                
+            if recrawl:
                 js = json.loads(subprocess.run(['/usr/local/bin/youtube-dl', '-J', url], stdout=subprocess.PIPE).stdout)
                 with open(f"{metadata_root_path}/{video_id}.json", "w") as json_file:
                     json.dump(js, json_file)

@@ -67,7 +67,7 @@ for video_id in video_metadata.keys():
 
         for c in classes.keys():
             classes_conf[c] /= classes[c]
-            if classes_conf[c] > 0.5:
+            if classes_conf[c] > 0:
                 video2class[video_id].append(class2id[c])
 
         cnt += 1
