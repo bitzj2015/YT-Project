@@ -81,10 +81,10 @@ def run_regression_epoch(model, dataloader, mode="train", optimizer=None, ep=0, 
             model.train()
             optimizer.zero_grad()
             loss, acc, last_count, f1, precision, recall = model(input, last_label, mask, with_graph=use_graph)
-            print("forward:", time.time()-start_time)
+            # print("forward:", time.time()-start_time)
             loss.backward()
             optimizer.step()
-            print("backward:", time.time()-start_time)
+            # print("backward:", time.time()-start_time)
  
         else:
             # Forward computation 

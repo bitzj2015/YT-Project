@@ -9,7 +9,7 @@ from tqdm import tqdm
 from sentence_transformers import SentenceTransformer
 from constants import root_path
 
-emb_model = SentenceTransformer('all-MiniLM-L6-v2')
+emb_model = SentenceTransformer('all-MiniLM-L6-v2', device='cuda')
 
 VERSION = "final_joint_cate_100_2_test"
 VERSION = "final_with_graph"
@@ -20,15 +20,17 @@ VERSION = "reddit_40"
 VERSION = "latest_joint_cate_010_0.3"
 # VERSION = "latest_joint_cate_010_reddit3_0.2"
 VERSION = "40_June"
+VERSION = "realuser_0.2_test_reload"
+VERSION = "v1_binary_0.2_test"
 VERSION = "realuser"
-
-TYPE = "_large"
+TYPE = ""
+# TYPE = "_large"
 MAX_LEN = 256
 
-with open(f"{root_path}/dataset/video_metadata_{VERSION}_large.json", "r") as json_file:
+with open(f"{root_path}/dataset/video_metadata_{VERSION}.json", "r") as json_file:
     video_metadata = json.load(json_file)
 
-with open(f"{root_path}/dataset/video_stat_{VERSION}_large.json", "r") as json_file:
+with open(f"{root_path}/dataset/video_stat_{VERSION}.json", "r") as json_file:
     video_stat = json.load(json_file)
 
 id_videos = dict(zip([i for i in range(len(video_stat.keys()))], video_stat.keys()))

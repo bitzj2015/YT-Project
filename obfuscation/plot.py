@@ -9,7 +9,8 @@ VERSION = "latest_joint_cate_010_0"
 VERSION = "cate_40_June"
 VERSION = "v1_binary"
 # VERSION = "latest_joint_cate_010_reddit3_1"
-PHASE = "train"
+VERSION = "realuser_2"
+PHASE = "test"
 with open(f"./results/{PHASE}_log_{ALPHA}_{VERSION}.json", "r") as json_file:
     data = json.load(json_file)["reward"]
 

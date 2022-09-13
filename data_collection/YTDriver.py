@@ -66,7 +66,7 @@ class YTDriver:
                 if not use_url:
                     try:
                         self.__log('clicking yt icon')
-                        self.driver.find_element_by_id('logo-icon').click()
+                        self.driver.find_element_by_id('logo').click()
                     except:
                         self.__log('getting via url')
                         self.driver.get('https://www.youtube.com')
@@ -143,7 +143,7 @@ class YTDriver:
             self.logger.info(message)
 
     def __click_video(self, video):
-        # self.tab_restart_browser()
+        self.tab_restart_browser()
         if type(video) == Video:
             self.__log(f"Start watching video {video.videoId}...")
             try:

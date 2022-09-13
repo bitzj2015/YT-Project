@@ -2,7 +2,7 @@ import json
 import numpy as np
 
 VERSION = "40_June"
-TAG = ""
+TAG = "tags"
 ROOT_PATH = "/project/kpsounis_171"
 ROOT_PATH = "/scratch/YT_dataset"
 

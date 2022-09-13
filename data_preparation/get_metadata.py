@@ -24,6 +24,10 @@ VERSION = "latest_joint_cate_010_reddit3_0.2"
 # VERSION = "40_June"
 VERSION = "v1_binary_0.2_test"
 VERSION = "realuser_0.2_test_v2"
+VERSION = "0.5_v2_kldiv_0.5_test_0.2_test"
+VERSION = "0.2_v2_kldiv_0.2_test_0.2_test"
+VERSION = "0.2_v2_kldiv_0.2_test"
+VERSION = "realuser"
 
 # VERSION = "reddit_cate_100_2_test"
 parser = argparse.ArgumentParser(description='get metadata.')

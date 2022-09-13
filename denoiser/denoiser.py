@@ -2,11 +2,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import random
+random.seed(1024)
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
 def kl_divergence(p, q):
-	return sum(p[i] * np.log2(p[i]/q[i]) for i in range(len(p)))
+	return sum(p[i] * np.log2((p[i]+1e-9)/(q[i]+1e-9)) for i in range(len(p)))
 
 class DenoiserNet(torch.nn.Module):
     def __init__(self, emb_dim, hidden_dim, video_embeddings, device="cpu", base=False):
@@ -66,7 +68,9 @@ class DenoiserNet(torch.nn.Module):
         encoded_ro = self.relu(self.linear_ro(label_ro))
         # print(encoded_vu[:, -1].size(), encoded_ro.size(), torch.cat([encoded_vu[:, -1], encoded_vo[:, -1], encoded_ro], axis=-1).size())
         decoded_ru = self.linear_ru(torch.cat([encoded_vu[:, -1], encoded_vo[:, -1], encoded_ro], axis=-1))
-        outputs = F.softmax(decoded_ru, -1)
+        # outputs = F.softmax(decoded_ru, -1)
+        outputs = (torch.sigmoid(decoded_ru) >= 0.5).int()
+        
          
         return outputs.detach().cpu().numpy()
 
@@ -97,25 +101,34 @@ class DenoiserNet(torch.nn.Module):
         else:
             decoded_ru = self.linear_ru(torch.cat([encoded_vu[:, -1], encoded_vo[:, -1], encoded_ro], axis=-1))
 
-        logits = F.log_softmax(decoded_ru, -1)
+        pred_label_ru = F.softmax(decoded_ru, -1)
+        # pred_label_ru = pred_label_ru * (pred_label_ru > 1e-4)
+        logits = torch.log(pred_label_ru)
         # print("logits: ", logits.size(), label_ru.size())
         
         # Get softmax and logits
-        logits = label_ru * logits
+        # logits = label_ru * logits
+        logits = pred_label_ru * (logits - torch.log(label_ru + 1e-9))
         logits = logits.sum(-1)
-        
-        # Calculate different metrics
-        pred_label_ru = F.softmax(decoded_ru, -1)
         
         label_ru = label_ru.tolist()
         pred_label_ru = pred_label_ru.tolist()
         
         avg_kl_distance = 0
         for i in range(batch_size):
-            avg_kl_distance += kl_divergence(label_ru[i], pred_label_ru[i])
+            avg_kl_distance += kl_divergence(pred_label_ru[i], label_ru[i])
         avg_kl_distance /= batch_size
             
-        return -logits, avg_kl_distance
+        return logits, avg_kl_distance
+        # outputs = torch.sigmoid(decoded_ru)
+        # loss = label_ru * torch.log(outputs) + (1 - label_ru) * torch.log(1 - outputs)
+        # pred = (outputs >= 0.5).int()
+        # print((pred == label_ru).sum() / pred.size(0) / pred.size(1))
+
+        # loss = -loss.mean()
+        # hamming_dis = torch.abs(pred - label_ru).sum(-1)
+
+        # return loss, hamming_dis.mean()
 
 
 class DenoiserDataset(Dataset):
@@ -182,14 +195,27 @@ class Denoiser(object):
 
         return loss_all / (i+1), kl_div_all / (i+1)
 
-def get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, batch_size=50, max_len=50):
-    train_size = int(len(base_persona) * 0.8)
-    print(train_size, len(base_persona), len(obfu_persona), len(base_rec), len(obfu_rec))
-    train_dataset = DenoiserDataset(base_persona[:train_size], obfu_persona[:train_size], base_rec[:train_size], obfu_rec[:train_size], max_len)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+def get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, batch_size=50, max_len=50, all_eval=False):
+    c = list(zip(base_persona, obfu_persona, base_rec, obfu_rec))
+    random.shuffle(c)
+    base_persona, obfu_persona, base_rec, obfu_rec = zip(*c)
 
-    test_dataset = DenoiserDataset(base_persona[train_size:], obfu_persona[train_size:], base_rec[train_size:], obfu_rec[train_size:], max_len)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    if all_eval:
+        train_dataset = DenoiserDataset(base_persona, obfu_persona, base_rec, obfu_rec, max_len)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        return train_loader
+    else:
+        train_size = int(len(base_persona) * 0.7)
+        print(train_size, len(base_persona), len(obfu_persona), len(base_rec), len(obfu_rec))
+        train_dataset = DenoiserDataset(base_persona[:train_size], obfu_persona[:train_size], base_rec[:train_size], obfu_rec[:train_size], max_len)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-    return train_loader, test_loader
+        val_size = int(len(base_persona) * 0.8)
+        val_dataset = DenoiserDataset(base_persona[train_size:val_size], obfu_persona[train_size:val_size], base_rec[train_size:val_size], obfu_rec[train_size:val_size], max_len)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
+        test_dataset = DenoiserDataset(base_persona[val_size:], obfu_persona[val_size:], base_rec[val_size:], obfu_rec[val_size:], max_len)
+        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+        return train_loader, val_loader, test_loader
             

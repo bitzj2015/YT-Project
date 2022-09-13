@@ -4,6 +4,7 @@ RUN apt-get -qqy update --no-install-recommends && \
     
 COPY crawler.py /opt/crawler.py
 COPY crawler_eval.py /opt/crawler_eval.py
+COPY crawler_reload.py /opt/crawler_reload.py
 COPY YTDriver.py /opt/YTDriver.py
 COPY requirements.txt /opt/requirements.txt
     

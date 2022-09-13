@@ -2,7 +2,7 @@
 class EnvConfig(object):
     def __init__(
         self,
-        num_browsers=100,
+        num_browsers=20,
         alpha=0.2,
         his_len=10,
         emb_dim=384 + 20,
@@ -12,7 +12,7 @@ class EnvConfig(object):
         kernel_dim=150,
         dropout=0.2,
         lstm_num_layer=2,
-        rollout_len=45,
+        rollout_len=60,
         GAMMA=0.99,
         T=1,
         rl_lr=0.01,

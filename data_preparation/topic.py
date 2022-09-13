@@ -13,6 +13,9 @@ VERSION = "_realuser_0.2_test_reload"
 # VERSION = "_latest_joint_cate_010"
 VERSION = "_v1_binary_0.2_test"
 VERSION = "_realuser_0.2_test_v2"
+VERSION = "_0.3_v2_kldiv_0.3_test_0.2_test"
+VERSION = "_0.2_v2_kldiv_0.2_test"
+# VERSION = "_realuser"
 saved_path = "../"
 
 for phase in ["get_tag", "get_embed", "get_sim", "get_map"]:

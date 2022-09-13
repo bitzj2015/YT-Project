@@ -62,10 +62,10 @@ class RolloutWorker(object):
         return True
 
     def get_state(self, his_len=10):
-        return np.array(self.watch_history[:])
+        return self.watch_history[:]
     
     def get_base_state(self, his_len=10):
-        return np.array(self.watch_history_base[:])
+        return self.watch_history_base[:]
         
     def get_watch_history(self):
         return (self.watch_history_base, self.watch_history)

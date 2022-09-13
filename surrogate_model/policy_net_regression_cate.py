@@ -42,11 +42,12 @@ class PolicyNetRegression(torch.nn.Module):
         for i in range(batch_size):
             outputs.append(out[i][-1])
         outputs = torch.stack(outputs, dim=0).squeeze()
-        # outputs = self.relu(self.linear(outputs))
-        # outputs = F.softmax(outputs, -1)
-        # emb = outputs.detach()
-        outputs = torch.sigmoid(self.linear(outputs))
-        emb = (outputs >= 0.5).int()
+        outputs = self.linear(outputs)
+        outputs = F.softmax(outputs, -1)
+        outputs = outputs * (outputs > 1e-4)
+        emb = outputs.detach()
+        # outputs = torch.sigmoid(self.linear(outputs))
+        # emb = (outputs >= 0.5).int()
          
         return emb.cpu().numpy()
 
@@ -74,24 +75,31 @@ class PolicyNetRegression(torch.nn.Module):
         outputs = torch.stack(outputs, dim=0).squeeze()
         
         # batch_size * hidden_dim -> batch_size * num_classes
-        # outputs = self.relu(self.linear(outputs))
-        # outputs = F.log_softmax(outputs, -1)
+        outputs = self.linear(outputs)
+        prob = F.softmax(outputs, -1)
+        prob = prob * (prob > 1e-4)
+        logits = torch.log(prob + 1e-9)
+        
+        loss = prob * (logits - torch.log(label + 1e-9))
+        # loss = (label + 1e-9) * (torch.log(label + 1e-9) - logits)
+        loss = loss.sum(-1)
+        loss = loss.mean(0)
         # loss = self.kl_loss(outputs, label)
-        # # print(self.kl_loss(torch.log(label[:-10] + 1e-7), label[10:]))
+        print(loss, self.kl_loss(torch.log(prob[:-10] + 1e-9), prob[10:]))
 
-        # return loss, 0, batch_size, 0, 0, 0
+        return loss, 0, batch_size, 0, 0, 0
 
         
-        outputs = torch.sigmoid(self.linear(outputs))
-        loss = label * torch.log(outputs) + (1 - label) * torch.log(1 - outputs)
-        loss = -loss.mean()
-        pred = (outputs >= 0.5).int()
-        acc = (pred == label).sum() / (label.size(0) * label.size(1))
-        haming_dis = torch.abs(pred - label).sum(-1) / 20
-        precision, recall, f1, _ = precision_recall_fscore_support(pred.reshape(-1).numpy(), label.reshape(-1).numpy())
-        print(haming_dis.mean())
+        # outputs = torch.sigmoid(self.linear(outputs))
+        # loss = label * torch.log(outputs) + (1 - label) * torch.log(1 - outputs)
+        # loss = -loss.mean()
+        # pred = (outputs >= 0.5).int()
+        # acc = (pred == label).sum() / (label.size(0) * label.size(1))
+        # haming_dis = torch.abs(pred - label).sum(-1) / 20
+        # precision, recall, f1, _ = precision_recall_fscore_support(pred.reshape(-1).numpy(), label.reshape(-1).numpy())
+        # print(haming_dis.mean())
 
-        return loss, acc, batch_size, f1[1], precision[1], recall[1]
+        # return loss, acc, batch_size, f1[1], precision[1], recall[1]
 
         '''
     def forward(self, inputs, label, label_cate, label_type, mask, with_graph=False):
