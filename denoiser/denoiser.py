@@ -14,7 +14,7 @@ class DenoiserNet(torch.nn.Module):
     def __init__(self, emb_dim, hidden_dim, video_embeddings, device="cpu", base=False):
         super(DenoiserNet,self).__init__()
         # gpu/cpu
-        self.device = device
+        self.device = "cpu"
 
         # Used to encode non-obfuscated videos
         self.lstm_vu = nn.LSTM(
@@ -61,7 +61,7 @@ class DenoiserNet(torch.nn.Module):
         # input_vo = self.graph_embeddings(input_vo.reshape(-1).tolist(), with_graph).reshape(batch_size, seq_len, self.emb_dim)
         input_vo = self.video_embeddings[input_vo.reshape(-1).tolist()].reshape(batch_size, seq_len, self.emb_dim)
 
-        label_ro = label_ro.to(self.device)
+        #label_ro = label_ro.to(self.device)
 
         encoded_vu, _ = self.lstm_vu(input_vu)
         encoded_vo, _ = self.lstm_vo(input_vo)
@@ -202,20 +202,20 @@ def get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, batch_s
 
     if all_eval:
         train_dataset = DenoiserDataset(base_persona, obfu_persona, base_rec, obfu_rec, max_len)
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,pin_memory=False )
         return train_loader
     else:
         train_size = int(len(base_persona) * 0.7)
         print(train_size, len(base_persona), len(obfu_persona), len(base_rec), len(obfu_rec))
         train_dataset = DenoiserDataset(base_persona[:train_size], obfu_persona[:train_size], base_rec[:train_size], obfu_rec[:train_size], max_len)
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=False)
 
         val_size = int(len(base_persona) * 0.8)
         val_dataset = DenoiserDataset(base_persona[train_size:val_size], obfu_persona[train_size:val_size], base_rec[train_size:val_size], obfu_rec[train_size:val_size], max_len)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
         test_dataset = DenoiserDataset(base_persona[val_size:], obfu_persona[val_size:], base_rec[val_size:], obfu_rec[val_size:], max_len)
-        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, pin_memory=False)
 
         return train_loader, val_loader, test_loader
             
