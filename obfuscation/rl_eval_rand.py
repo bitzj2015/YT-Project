@@ -20,7 +20,7 @@ VERSION = "v1_binary_0.2_test"
 # VERSION = "realuser_0.2_test"
 VERSION = "0.2_v2_kldiv_0.2_test_0.2_test"
 VERSION = "0.3_v2_kldiv_0.3_test"
-N = 60
+N = 150
 PHASE = 0
 
 video_metadata = {}
@@ -28,17 +28,18 @@ tag2class = {}
 class2id = {}
 data = []
 cnt = 0
-for VERSION in ["0.3_v2_kldiv_0.3_test", "0.5_v2_kldiv_0.5_test", "0.2_v2_kldiv_0.2_test", "0.2_v2_kldiv_0.2_test_0.2_test", "0.3_v2_kldiv_0.3_test_0.2_test", "0.5_v2_kldiv_0.5_test_0.2_test"]:
-# for VERSION in ["realuser", "realuser_0.2_test", "realuser_0.2_test_v2"]:
+# for VERSION in ["0.3_v2_kldiv_0.3_test", "0.5_v2_kldiv_0.5_test", "0.2_v2_kldiv_0.2_test", "0.2_v2_kldiv_0.2_test_0.2_test", "0.3_v2_kldiv_0.3_test_0.2_test", "0.5_v2_kldiv_0.5_test_0.2_test"]:
+# for VERSION in ["realuser", "realuser_0.2_test", "realuser_0.2_test_v2", "realuser_all"]:
+for VERSION in ["0.2_v2_kldiv_reddit2_test"]:
 
     with open(f"{root_path}/dataset/sock_puppets_{VERSION}.json", "r") as json_file:
         data_tmp = json.load(json_file)[2]["data"]
     for item in data_tmp:
         user_id = item["user_id"]
-        if int(user_id.split("_")[-1]) < 60:
+        if int(user_id.split("_")[2]) < N:
             data.append(item)
 
-    with open(f"{root_path}/dataset/video_metadata_{VERSION}.json", "r") as json_file:
+    with open(f"{root_path}/dataset/video_metadata_{VERSION}_new.json", "r") as json_file:
         video_metadata_tmp = json.load(json_file)
     video_metadata.update(video_metadata_tmp)
 
@@ -119,7 +120,7 @@ for i in tqdm(range(len(data))):
 removed_videos = []
 
 for video in unique_home_video_id.keys():
-    if unique_home_video_id[video] > 0 and unique_home_video_id[video] <= 19: # 25
+    if unique_home_video_id[video] > 0 and unique_home_video_id[video] <= 20: # 18, real 31, reddit 19
         removed_videos.append(video)
 for video in removed_videos:
     del unique_home_video_id[video]
@@ -140,10 +141,23 @@ if not KL:
     def dist_metric(p, q):
         return sum([(p[i] - q[i]) ** 2 for i in range(len(p))])
 else:
-    # calculate the kl divergence
+    # # calculate the kl divergence
+    # def dist_metric(p, q):
+    #     # return distance.jensenshannon(p, q, 2)
+    #     return sum(p[i] * np.log2((p[i] + 1e-9)/(q[i] + 1e-9)) for i in range(len(p)))
+
+    SENSITIVITY_W = [1 for _ in range(3)] + [154/27 for _ in range(3)] + [1 for _ in range(101)] + [154/27 for _ in range(24)] + [1 for _ in range(23)]
     def dist_metric(p, q):
-        # return distance.jensenshannon(p, q, 2)
-        return sum(p[i] * np.log2((p[i] + 1e-9)/(q[i] + 1e-9)) for i in range(len(p)))
+        undesired_dist = 0
+        desired_dist = 0
+        t = 0
+        for i in range(len(p)):
+            if SENSITIVITY_W[i] > 1:
+                undesired_dist += 1 * p[i] * np.log2((p[i] * 1 + 1e-9)/(q[i] * 1 + 1e-9))
+                t += (q[i] > 0)
+            else:
+                desired_dist += SENSITIVITY_W[i] * p[i] * np.log2((p[i] + 1e-9)/(q[i] + 1e-9))
+        return undesired_dist + desired_dist
         
 
 def new_metric(p,q):
@@ -199,42 +213,59 @@ def get_cate_dist(data, filtered_video_ids):
     return last_label, data_home_video_ids
 
 avg = 0
+avg2 = 0
 all_dist = 0
+
 for i in tqdm(range(N)):
     base_cate_all = []
     avg_dist = 0
+    avg_dist2 = 0
     dist = 0
     cnt = 0
-    for j in range(len(data[f"rl_base_{i}"])):
-        rl_base_cate, rl_base_home_video_ids = get_cate_dist(data[f"rl_base_{i}"][j]["homepage"], filtered_video_ids)
-        rand_base_cate, rand_base_home_video_ids = get_cate_dist(data[f"rand_base_{i}"][j]["homepage"], filtered_video_ids)
-        # dist += dist_metric(rl_base_cate, rand_base_cate)
-        # cnt += 1
-        base_cate_all.append(rl_base_cate)
-    # dist /= len(data[f"rl_base_{i}"])
-    # all_dist += dist
+    # for j in range(len(data[f"rl_base_{i}"])):
+    #     rl_base_cate, rl_base_home_video_ids = get_cate_dist(data[f"rl_base_{i}"][j]["homepage"], filtered_video_ids)
+    #     rand_base_cate, rand_base_home_video_ids = get_cate_dist(data[f"rand_base_{i}"][j]["homepage"], filtered_video_ids)
+    #     # dist += dist_metric(rl_base_cate, rand_base_cate)
+    #     # cnt += 1
+    #     base_cate_all.append(rl_base_cate)
+    # # dist /= len(data[f"rl_base_{i}"])
+    # # all_dist += dist
 
     for j in range(len(data[f"rand_base_{i}"])):
         rand_base_cate, rand_base_home_video_ids = get_cate_dist(data[f"rand_base_{i}"][j]["homepage"], filtered_video_ids)
         base_cate_all.append(rand_base_cate)
+
+
+    for k in range(4):
+        for j in range(len(data[f"rand_base_{i}_{k+1}"])):
+            rand_base_cate, rand_base_home_video_ids = get_cate_dist(data[f"rand_base_{i}_{k+1}"][j]["homepage"], filtered_video_ids)
+            base_cate_all.append(rand_base_cate)
+
     base_cate_all = np.array(base_cate_all)
     base_cate_all_mean = np.mean(base_cate_all, axis=0)
+    # print(base_cate_all.shape)
 
     for k in range(len(base_cate_all)):
         cate_mean = np.zeros((154))
+        cate_mean2 = np.zeros((154))
         for j in range(len(base_cate_all)):
+            cate_mean += np.array(base_cate_all[j])
             
             if k != j:
-                cate_mean += np.array(base_cate_all[j])
+                cate_mean2 += np.array(base_cate_all[j])
                 dist += dist_metric(base_cate_all[j], base_cate_all[k])
                 cnt += 1
-        cate_mean /= (len(base_cate_all) - 1)
+        cate_mean /= (len(base_cate_all) )
+        cate_mean2 /= (len(base_cate_all) - 1)
         avg_dist += dist_metric(cate_mean, base_cate_all[k])
+        avg_dist2 += dist_metric(cate_mean2, base_cate_all[k])
     avg_dist /= len(base_cate_all)
+    avg_dist2 /= len(base_cate_all)
     avg += avg_dist
+    avg2 += avg_dist2
     all_dist += dist / cnt
 
-print(avg / N, all_dist / N)
+print(avg / N, avg2 / N, (avg + avg2) / 2 / N, all_dist / N)
 
     
 

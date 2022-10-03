@@ -8,20 +8,27 @@ from scipy.spatial import distance
 random.seed(0)
 root_path = "/scratch/YT_dataset"
 
-VERSION = "final_joint_cate_100_2_test"
+# VERSION = "final_joint_cate_100_2_test"
 # VERSION = "final_joint_cate_100_2_0.1"
-VERSION = "final_joint_cate_103_2_test"
-VERSION = "reddit_cate_100_2_test"
-VERSION = "latest_joint_cate_010"
+# VERSION = "final_joint_cate_103_2_test"
+# VERSION = "reddit_cate_100_2_test"
+# VERSION = "latest_joint_cate_010"
 # VERSION = "latest_joint_cate_010_reddit3_0.2"
 # VERSION = "latest_joint_cate_010_0.3"
-VERSION = "v1_binary_0.2_test"
+# VERSION = "v1_binary_0.2_test"
 # VERSION = "0.3_v2_kldiv_0.3_test_0.2_test"
 # VERSION = "realuser_0.2_test"
-VERSION = "0.5_v2_kldiv_0.5_test_0.2_test"
-VERSION = "0.5_v2_kldiv_0.5_test"
-VERSION = "realuser"
-N = 200
+# VERSION = "0.5_v2_kldiv_0.5_test_0.2_test"
+# VERSION = "0.2_v2_kldiv_0.2_test"
+# VERSION = "realuser"
+# VERSION = "0.2_v2_kldiv_reddit_test"
+# VERSION = "0.2_v2_kldiv_reddit2_test"
+VERSION = "v2_kldiv_sensitive"
+# VERSION = "realuser_all"
+
+stat = {}
+N = 400
+TH = 48
 PHASE = 0
 with open(f"{root_path}/dataset/category_ids_latest.json", "r") as json_file:
     CATE_IDS = json.load(json_file)
@@ -29,8 +36,8 @@ with open(f"{root_path}/dataset/category_ids_latest.json", "r") as json_file:
 with open(f"{root_path}/dataset/sock_puppets_{VERSION}.json", "r") as json_file:
     data = json.load(json_file)[2]["data"]
 
-with open(f"{root_path}/dataset/sock_puppets_0.2_v2_kldiv_0.2_test.json", "r") as json_file:
-    data_base = json.load(json_file)[2]["data"]
+# with open(f"{root_path}/dataset/sock_puppets_0.3_v2_kldiv_0.3_test.json", "r") as json_file:
+#     data_base = json.load(json_file)[2]["data"]
 
 # for item in data_base:
 #     if item["user_id"].startswith("rand_base"):
@@ -40,7 +47,7 @@ with open(f"{root_path}/dataset/sock_puppets_0.2_v2_kldiv_0.2_test.json", "r") a
 # with open(f"{root_path}/dataset/video_ids_{VERSION}.json", "r") as json_file:
 #     VIDEO_IDS = json.load(json_file)
 
-with open(f"{root_path}/dataset/video_metadata_{VERSION}.json", "r") as json_file:
+with open(f"{root_path}/dataset/video_metadata_{VERSION}_new.json", "r") as json_file:
     VIDEO_METADATA = json.load(json_file)
 
 with open(f"{root_path}/dataset/topic/tag2class_{VERSION}2.json", "r") as json_file:
@@ -49,15 +56,22 @@ with open(f"{root_path}/dataset/topic/tag2class_{VERSION}2.json", "r") as json_f
 with open(f"{root_path}/dataset/topic/class2id2.json", "r") as json_file:
     class2id = json.load(json_file)
 
+id2class = {}
+for cate in class2id.keys():
+    id2class[class2id[cate]] = cate
+    stat[cate] = 0.1
+
+avg_stat = {"avg_num_class":0, "avg_num_class_p":0}
 video2class = {}
 cnt = 0
 cnt_fail = 0
 S = 0
 for video_id in VIDEO_METADATA.keys():
+    classes = {}
+    classes_conf = {}
     try:
         tags = VIDEO_METADATA[video_id]["tags"].split(",")
-        classes = {}
-        classes_conf = {}
+
         
         for tag in tags:
             if tag == "":
@@ -95,9 +109,22 @@ if not KL:
         return sum([(p[i] - q[i]) ** 2 for i in range(len(p))])
 else:
     # calculate the kl divergence
+    # def dist_metric(p, q):
+    #     # return distance.jensenshannon(p, q, 2)
+    #     return sum(p[i] * np.log2((p[i] + 1e-9)/(q[i] + 1e-9)) for i in range(len(p)))
+
+    SENSITIVITY_W = [1 for _ in range(3)] + [154/27 for _ in range(3)] + [1 for _ in range(101)] + [154/27 for _ in range(24)] + [1 for _ in range(23)]
     def dist_metric(p, q):
-        # return distance.jensenshannon(p, q, 2)
-        return sum(p[i] * np.log2((p[i] + 1e-9)/(q[i] + 1e-9)) for i in range(len(p)))
+        undesired_dist = 0
+        desired_dist = 0
+        t = 0
+        for i in range(len(p)):
+            if SENSITIVITY_W[i] > 1:
+                undesired_dist += p[i] * np.log2((p[i] * 1 + 1e-9)/(q[i] * 1 + 1e-9))
+                t += q[i] > 1e-4
+            else:
+                desired_dist += SENSITIVITY_W[i] * p[i] * np.log2((p[i] + 1e-9)/(q[i] + 1e-9))
+        return desired_dist # + desired_dist
         
 
 def new_metric(p,q):
@@ -134,8 +161,8 @@ def get_cate_dist(data, filtered_video_ids):
 
     last_cate_dict = {k : v for k, v in sorted(last_cate_dict.items(), key=lambda item: item[1], reverse=True)}
     total_f = sum(list(last_cate_dict.values()))
-    mean_f = 0 #np.mean(list(last_cate_dict.values()))
-    std_f = 0 # np.std(list(last_cate_dict.values()))
+    mean_f = 0 # np.mean(list(last_cate_dict.values()))
+    std_f = 0 #np.std(list(last_cate_dict.values()))
     if not KL:
         # last_cate_dict = list(last_cate_dict.keys())[:20]
         for cate in list(last_cate_dict.keys()):
@@ -145,7 +172,7 @@ def get_cate_dist(data, filtered_video_ids):
                 last_label[class2id[cate]] = 0
             else:
                 last_label[class2id[cate]] = 0
-        # print(sum(last_label))
+
     else:
         for cate in last_cate_dict.keys():
             last_label[class2id[cate]] = last_cate_dict[cate] / total_f
@@ -157,7 +184,6 @@ if PHASE == 0:
     filtered_video_ids = {}
     unique_home_video_id = {}
 
-    # data_truth = data
     for i in tqdm(range(len(data))):
         filtered_video_ids.update(dict(zip(data[i]["initial_homepage"], [1 for _ in range(len(data[i]["initial_homepage"]))])))
 
@@ -180,7 +206,7 @@ if PHASE == 0:
     removed_videos = []
 
     for video in unique_home_video_id.keys():
-        if unique_home_video_id[video] > 0 and unique_home_video_id[video] <= 9: # 52, 55, 45
+        if unique_home_video_id[video] > 0 and unique_home_video_id[video] <= TH: # 52, 54, 44 # realuser 61 # reddit 75
             removed_videos.append(video)
     for video in removed_videos:
         del unique_home_video_id[video]
@@ -224,20 +250,34 @@ if PHASE == 0:
         # if i < 30:
         #     continue
         try:
-            rl_base_cate, rl_base_home_video_ids = get_cate_dist(data[f"rl_base_{i}"]["homepage"], filtered_video_ids)
-            rl_obfu_cate, rl_obfu_home_video_ids = get_cate_dist(data[f"rl_obfu_{i}"]["homepage"], filtered_video_ids)
-            bias_obfu_cate, bias_obfu_home_video_ids = get_cate_dist(data[f"bias_obfu_{i}"]["homepage"], filtered_video_ids)
+            rl_base_cate, rl_base_home_video_ids = get_cate_dist(data[f"rand_base_{i}"]["homepage"], filtered_video_ids)
+            rl_obfu_cate, rl_obfu_home_video_ids = get_cate_dist(data[f"rl_obfu_{i}_new"]["homepage"], filtered_video_ids)
+            bias_obfu_cate, bias_obfu_home_video_ids = get_cate_dist(data[f"rl_obfu_{i}"]["homepage"], filtered_video_ids)
             rand_base_cate, rand_base_home_video_ids = get_cate_dist(data[f"rand_base_{i}"]["homepage"], filtered_video_ids)
             rand_base_cate2, _ = get_cate_dist(data[f"rand_base_{random.randint(0,N-1)}"]["homepage"], filtered_video_ids)
             rand_obfu_cate, rand_obfu_home_video_ids = get_cate_dist(data[f"rand_obfu_{i}"]["homepage"], filtered_video_ids)
-            S += sum(rl_obfu_cate) #len(rl_base_home_video_ids)
+            S += sum(rl_obfu_cate)
 
             rand_base_cate_view, _ = get_cate_dist([data[f"rand_base_{i}"]["viewed"]], {})
+            class_id = np.argsort(rand_base_cate_view)[-15:]
+            avg_stat["avg_num_class"] += (np.array(rand_base_cate_view) > 0).sum()
+            
+            for idx in class_id:
+                stat[id2class[idx]] += 1
+                avg_stat["avg_num_class_p"] += rand_base_cate_view[idx]
+            # if i < 5:
+            #     print(data[f"rand_base_{i}"]["viewed"])
+            #     print(data[f"rl_base_{i}"]["viewed"])
+            #     for video  in rand_base_home_video_ids:
+            #         if "tags" in VIDEO_METADATA[video].keys():
+            #             print(VIDEO_METADATA[video]["tags"])
+            #             print(video2class[video], VIDEO_METADATA[video]["title"], video)
+
             rand_avg_kl_view += dist_metric(rand_base_cate, rand_base_cate_view)
-  
+
             save_data[f"rl_base_{i}"] = data[f"rand_base_{i}"]
             save_data[f"rl_obfu_{i}"] = data[f"rl_obfu_{i}"]
-            save_data[f"bias_obfu_{i}"] = data[f"bias_obfu_{i}"]
+            save_data[f"bias_obfu_{i}"] = data[f"rl_obfu_{i}"]
             save_data[f"rand_base_{i}"] = data[f"rand_base_{i}"]
             save_data[f"rand_obfu_{i}"] = data[f"rand_obfu_{i}"]
 
@@ -385,3 +425,13 @@ else:
             )
         )
         plt.savefig(f"./figs/rl_base_sample_{i}.png", bbox_inches='tight')
+
+
+import matplotlib.pyplot as plt
+
+plt.figure()
+plt.bar([i for i in range(len(stat))], np.log10(list(stat.values())))
+plt.savefig("stat.png")
+
+# print(avg_stat["avg_num_class"] / N, avg_stat["avg_num_class_p"] / N)
+# print(stat)

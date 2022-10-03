@@ -94,6 +94,7 @@ if not args.eval:
     # Initialize envrionment and workers
     workers = [RolloutWorker.remote(env_args, i) for i in range(env_args.num_browsers)]
     env = Env(env_args, yt_model, denoiser, rl_agent, workers, seed=0, id2video_map=ID2VIDEO, use_rand=args.use_rand)
+    rl_agent.model.load_state_dict(torch.load("./param/agent_0.2_v2_kldiv.pkl", map_location=device))
     
     # Start RL agent training loop
     losses = []
@@ -104,42 +105,8 @@ if not args.eval:
     
     best_reward = -100
     torch.save(env.denoiser.denoiser_model.state_dict(), args.denoiser_path)
-    for ep in range(50):
+    for ep in range(10):
         n_steps = train_inputs.shape[0] // env_args.num_browsers
-        '''
-        # Update denoiser
-        base_persona, obfu_persona, base_rec, obfu_rec = [], [], [] ,[]
-        max_len = 0
-        env.rl_agent.eval()
-        for i in range(n_steps):
-            # for j in range(env_args.num_browsers):
-            #     env.workers[j].user_videos = train_inputs[i * env_args.num_browsers + j].tolist()
-            ray.get([env.workers[j].update_user_videos.remote(train_inputs[i * env_args.num_browsers + j].tolist()) for j in range(env_args.num_browsers)])
-            env.start_env()
-            _, _ = env.rollout(train_rl=False)
-            env.get_watch_history_from_workers()
-            base_persona += env.all_watch_history_base
-            obfu_persona += env.all_watch_history
-            base_rec += env.cur_cate_base
-            obfu_rec += env.cur_cate
-            # print(ep, env.all_watch_history_base[0])
-            env.stop_env(save_param=False)
-            
-            
-        for item in obfu_persona:
-            max_len = max(max_len, len(item))
-            
-        denoiser_train_loader, denoiser_test_loader = get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, env_args.num_browsers, max_len)
-        for round in range(10):
-            env_args.logger.info(f"Training denoiser round: {round}")
-            env.update_denoiser(denoiser_train_loader)
-        torch.save(env.denoiser.denoiser_model.state_dict(), args.denoiser_path)
-        env_args.logger.info(f"Testing denoiser")
-        try:
-            env.update_denoiser(denoiser_test_loader, train_denoiser=False)
-        except:
-            env_args.logger.info(f"Testing denoiser failed")
-        '''
 
         # Update obfuscator (rl agent)
         env.rl_agent.train()
@@ -214,25 +181,6 @@ else:
     for ep in range(1):
         # Update denoiser
         base_persona, obfu_persona, base_rec, obfu_rec = [], [], [] ,[]
-        max_len = 0
-        for i in range(train_inputs.shape[0] // env_args.num_browsers):
-            ray.get([env.workers[j].update_user_videos.remote(train_inputs[i * env_args.num_browsers + j].tolist()) for j in range(env_args.num_browsers)])
-            env.start_env()
-            _, _ = env.rollout(train_rl=False)
-            env.get_watch_history_from_workers()
-            base_persona += env.all_watch_history_base
-            obfu_persona += env.all_watch_history
-            base_rec += env.cur_cate_base
-            obfu_rec += env.cur_cate
-            # print(len(base_persona))
-            env.stop_env(save_param=False)
-        for item in obfu_persona:
-            max_len = max(max_len, len(item))
-        denoiser_train_loader, denoiser_test_loader = get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, env_args.num_browsers, max_len)
-        for round in range(10):
-            env_args.logger.info(f"Training denoiser round: {round}")
-            env.update_denoiser(denoiser_train_loader)
-        torch.save(env.denoiser.denoiser_model.state_dict(), args.denoiser_path)
         env_args.logger.info(f"Testing denoiser")
         try:
             env.update_denoiser(denoiser_test_loader, train_denoiser=False)

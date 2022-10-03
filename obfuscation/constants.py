@@ -7,8 +7,9 @@ root_path = "/scratch/YT_dataset"
 # VERSION = "final"
 # TAG = "_filter"
 VERSION = "40_June"
-VERSION = "realuser"
-TAG = ""
+# VERSION = "realuser_all"
+# VERSION = "reddit_40_new"
+TAG = "tags"
 
 with open(f"{root_path}/dataset/video_ids_{VERSION}.json", "r") as json_file:
     VIDEO_IDS = json.load(json_file)
@@ -27,3 +28,16 @@ with open(f"../dataset/video_adj_list_final_w.json", "r") as json_file:
 def kl_divergence(p, q):
 	return sum([p[i] * np.log2((p[i] + 1e-9)/(q[i] + 1e-9)) for i in range(len(p))])
     # return math.sqrt(sum([(p[i] - q[i]) ** 2 for i in range(len(p))]))
+
+SENSITIVITY_W = [1 for _ in range(3)] + [154/27 for _ in range(3)] + [1 for _ in range(101)] + [154/27 for _ in range(24)] + [1 for _ in range(23)]
+def wkl_divergence(p, q):
+    undesired_dist = 0
+    desired_dist = 0
+    for i in range(len(p)):
+        if SENSITIVITY_W[i] > 1:
+            # if p[i] < 1e-4:
+            #     p[i] = 1e-4
+            undesired_dist += p[i] #* np.log2((p[i] * 1)/(q[i] * 0 + 1e-4))
+        else:
+            desired_dist += p[i] * np.log2((p[i] + 1e-9)/(q[i] + 1e-9))
+    return (desired_dist, undesired_dist)

@@ -58,14 +58,15 @@ class RolloutWorker(object):
             video = obfuscation_video
             self.watch_history_type.append(1)
         self.watch_history.append(video)
+        # print(len(self.watch_history_base), len(self.watch_history))
         self.step += 1
         return True
 
     def get_state(self, his_len=10):
-        return self.watch_history[:]
+        return np.array(self.watch_history[:])
     
     def get_base_state(self, his_len=10):
-        return self.watch_history_base[:]
+        return np.array(self.watch_history_base[:])
         
     def get_watch_history(self):
         return (self.watch_history_base, self.watch_history)
