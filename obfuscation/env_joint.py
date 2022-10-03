@@ -32,7 +32,7 @@ class Env(object):
             with open(f"./results/bias_weight_{self.env_args.alpha}_{VERSION}.json", "r") as json_file:
                 data = json.load(json_file)
             self.bias_weight = list(data)
-            print(len(self.bias_weight))
+            # print(len(self.bias_weight))
             sum_w = sum(self.bias_weight)
             self.bias_weight = [i / sum_w for i in self.bias_weight]
 
@@ -74,17 +74,20 @@ class Env(object):
         self.cur_cate_base = self.yt_model.get_rec(self.base_state, topk=100)
         
         print(self.state.size(), self.base_state.size())
+        # print(self.cur_cate[0][3:6], self.cur_cate_base[0][3:6])
+        # print(self.cur_cate[0][107:110], self.cur_cate_base[0][107:110])
 
         # Get denoised non-obfuscated recommendations
         # cur_cate_base_pred = self.denoiser.denoiser_model.get_rec(self.base_state, self.state, torch.from_numpy(self.cur_cate).to(self.env_args.device)) # input_vu, input_vo, label_ro
 
         # Reward for obfuscator
-        cur_reward_obfuscator = [kl_divergence(self.cur_cate[i], self.cur_cate_base[i]) for i in range(len(self.workers))]
+        cur_reward_obfuscator = [wkl_divergence(self.cur_cate[i], self.cur_cate_base[i])[0] for i in range(len(self.workers))]
         # cur_reward_obfuscator = [((self.cur_cate_base[i] - self.cur_cate[i]) ** 2).sum() for i in range(len(self.workers))]
 
         # Reward for denoiser
         # cur_reward_denoiser = [-kl_divergence(self.cur_cate_base[i], cur_cate_base_pred[i]) for i in range(len(self.workers))]
-        cur_reward_denoiser = [0 for i in range(len(self.workers))]
+        # cur_reward_denoiser = [0 for _ in range(len(self.workers))]
+        cur_reward_denoiser = [wkl_divergence(self.cur_cate[i], self.cur_cate_base[i])[1] for i in range(len(self.workers))]
 
         # Total rewards
         self.env_args.logger.info("KL distance of obfuscation: {}, denoiser: {}".format(np.mean(cur_reward_obfuscator), np.mean(cur_reward_denoiser)))
@@ -123,12 +126,12 @@ class Env(object):
         
     def rollout(self, train_rl=True):
         self.env_args.logger.info("start rolling out")
-        for _ in range(self.env_args.rollout_len):
+        for i in range(self.env_args.rollout_len):
             flag = random.random()
             if flag < self.env_args.alpha:
                 obfuscation_videos = self.get_next_obfuscation_videos()
                 ret = ray.get([self.workers[i].rollout.remote(obfuscation_videos[i]) for i in range(len(self.workers))])
-                if not ret:
+                if not ret[0]:
                     break
                 self.send_reward_to_workers()
                 self.update_rl_agent(reward_only=True)
@@ -137,8 +140,9 @@ class Env(object):
                     for i in range(len(obfuscation_videos)):
                         self.bias_weight[obfuscation_videos[i]] += max(0, rewards[i])
             else:
+                
                 ret = ray.get([self.workers[i].rollout.remote(-1) for i in range(len(self.workers))])
-                if not ret:
+                if not ret[0]:
                     break
         self.get_next_obfuscation_videos(terminate=True)
         self.env_args.logger.info("end rolling out")
