@@ -3,8 +3,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
 import random
-from scipy.spatial import distance
-
+from copy import deepcopy
 random.seed(0)
 root_path = "/scratch/YT_dataset"
 
@@ -18,17 +17,22 @@ root_path = "/scratch/YT_dataset"
 # VERSION = "v1_binary_0.2_test"
 # VERSION = "0.3_v2_kldiv_0.3_test_0.2_test"
 # VERSION = "realuser_0.2_test"
-# VERSION = "0.5_v2_kldiv_0.5_test_0.2_test"
-# VERSION = "0.2_v2_kldiv_0.2_test"
+# VERSION = "0.2_v2_kldiv_0.2_test_feb"
+VERSION = "0.2_v2_kldiv_0.2_test_feb"
 # VERSION = "realuser"
 # VERSION = "0.2_v2_kldiv_reddit_test"
 # VERSION = "0.2_v2_kldiv_reddit2_test"
-VERSION = "v2_kldiv_sensitive"
+# VERSION = "v2_kldiv_sensitive"
 # VERSION = "realuser_all"
+VERSION2 = "0.2_v2_kldiv_pbooster_3_new"
+VERSION2 = "0.2_v2_kldiv_pbooster_reddit_0.2_3_new_v2"
+VERSION2 = "0.7_v2_kldiv_feb_0.7_0_new_v2"
+# VERSION2 = "0.2_realuser_pbooster_3_new_v2"
+# VERSION2 = "0.5_realuser_0_new_v2"
 
 stat = {}
-N = 400
-TH = 48
+N = 1000
+TH = 35 # new reddit 35
 PHASE = 0
 with open(f"{root_path}/dataset/category_ids_latest.json", "r") as json_file:
     CATE_IDS = json.load(json_file)
@@ -39,19 +43,43 @@ with open(f"{root_path}/dataset/sock_puppets_{VERSION}.json", "r") as json_file:
 # with open(f"{root_path}/dataset/sock_puppets_0.3_v2_kldiv_0.3_test.json", "r") as json_file:
 #     data_base = json.load(json_file)[2]["data"]
 
-# for item in data_base:
-#     if item["user_id"].startswith("rand_base"):
-#         item["user_id"] = item["user_id"].replace("rand_base", "rl_base")
-#         data.append(item)
+with open(f"{root_path}/dataset/sock_puppets_{VERSION2}.json", "r") as json_file:
+    data_base = json.load(json_file)[2]["data"]
 
-# with open(f"{root_path}/dataset/video_ids_{VERSION}.json", "r") as json_file:
-#     VIDEO_IDS = json.load(json_file)
+data = []
+for item in data_base:
+    # if item["user_id"].startswith("rand_base"):
+    #     item["user_id"] = item["user_id"].replace("rand_base", "rl_base")
+    #     data.append(deepcopy(item))
+
+    if item["user_id"].startswith("bias_base"):
+        data.append(deepcopy(item))
+        item["user_id"] = item["user_id"].replace("bias_base", "pb_base")
+        data.append(deepcopy(item))
+        item["user_id"] = item["user_id"].replace("pb_base", "rand_base")
+        data.append(deepcopy(item))
+
+    if item["user_id"].startswith("bias_obfu"):
+        data.append(deepcopy(item))
+        item["user_id"] = item["user_id"].replace("bias_obfu", "pb_obfu")
+        data.append(deepcopy(item))
+        item["user_id"] = item["user_id"].replace("pb_obfu", "rand_obfu")
+        data.append(deepcopy(item))
+
+# with open(f"{root_path}/dataset/video_metadata_0.3_v2_kldiv_0.3_test_new.json", "r") as json_file:
+#     VIDEO_METADATA = json.load(json_file)
+
+with open(f"{root_path}/dataset/video_metadata_{VERSION2}_new.json", "r") as json_file:
+    VIDEO_METADATA = json.load(json_file)
 
 with open(f"{root_path}/dataset/video_metadata_{VERSION}_new.json", "r") as json_file:
-    VIDEO_METADATA = json.load(json_file)
+    VIDEO_METADATA.update(json.load(json_file))
 
 with open(f"{root_path}/dataset/topic/tag2class_{VERSION}2.json", "r") as json_file:
     tag2class = json.load(json_file)
+
+with open(f"{root_path}/dataset/topic/tag2class_{VERSION2}2.json", "r") as json_file:
+    tag2class.update(json.load(json_file))
 
 with open(f"{root_path}/dataset/topic/class2id2.json", "r") as json_file:
     class2id = json.load(json_file)
@@ -109,22 +137,22 @@ if not KL:
         return sum([(p[i] - q[i]) ** 2 for i in range(len(p))])
 else:
     # calculate the kl divergence
-    # def dist_metric(p, q):
-    #     # return distance.jensenshannon(p, q, 2)
-    #     return sum(p[i] * np.log2((p[i] + 1e-9)/(q[i] + 1e-9)) for i in range(len(p)))
-
-    SENSITIVITY_W = [1 for _ in range(3)] + [154/27 for _ in range(3)] + [1 for _ in range(101)] + [154/27 for _ in range(24)] + [1 for _ in range(23)]
     def dist_metric(p, q):
-        undesired_dist = 0
-        desired_dist = 0
-        t = 0
-        for i in range(len(p)):
-            if SENSITIVITY_W[i] > 1:
-                undesired_dist += p[i] * np.log2((p[i] * 1 + 1e-9)/(q[i] * 1 + 1e-9))
-                t += q[i] > 1e-4
-            else:
-                desired_dist += SENSITIVITY_W[i] * p[i] * np.log2((p[i] + 1e-9)/(q[i] + 1e-9))
-        return desired_dist # + desired_dist
+        # return distance.jensenshannon(p, q, 2)
+        return sum(p[i] * np.log2((p[i] + 1e-9)/(q[i] + 1e-9)) for i in range(len(p)))
+
+    # SENSITIVITY_W = [1 for _ in range(3)] + [154/27 for _ in range(3)] + [1 for _ in range(101)] + [154/27 for _ in range(24)] + [1 for _ in range(23)]
+    # def dist_metric(p, q):
+    #     undesired_dist = 0
+    #     desired_dist = 0
+    #     t = 0
+    #     for i in range(len(p)):
+    #         if SENSITIVITY_W[i] > 1:
+    #             undesired_dist += p[i] * np.log2((p[i] * 1 + 1e-9)/(q[i] * 1 + 1e-9))
+    #             t += q[i] > 1e-4
+    #         else:
+    #             desired_dist += SENSITIVITY_W[i] * p[i] * np.log2((p[i] + 1e-9)/(q[i] + 1e-9))
+    #     return undesired_dist + desired_dist
         
 
 def new_metric(p,q):
@@ -244,15 +272,31 @@ if PHASE == 0:
         
     data = tmp
 
+    # avg_obf = []
+    # for i in tqdm(range(N)):
+    #     rl_obfu_cate, rl_obfu_home_video_ids = get_cate_dist(data[f"rl_obfu_{i}"]["homepage"], filtered_video_ids)
+    #     bias_obfu_cate, bias_obfu_home_video_ids = get_cate_dist(data[f"bias_obfu_{i}"]["homepage"], filtered_video_ids)
+    #     rand_obfu_cate, rand_obfu_home_video_ids = get_cate_dist(data[f"rand_obfu_{i}"]["homepage"], filtered_video_ids)
+    #     avg_obf.append(rl_obfu_cate)
+    #     avg_obf.append(bias_obfu_cate)
+    #     avg_obf.append(rand_obfu_cate)
+
+    
+    # avg_obf = np.array(avg_obf)
+    # avg_obf = np.mean(avg_obf, axis=0)
+
     save_data = {}
     T = 0
     for i in tqdm(range(N)):
         # if i < 30:
         #     continue
         try:
+            if len(data[f"pb_obfu_{i}"]["viewed"]) <  100:
+                continue
             rl_base_cate, rl_base_home_video_ids = get_cate_dist(data[f"rand_base_{i}"]["homepage"], filtered_video_ids)
-            rl_obfu_cate, rl_obfu_home_video_ids = get_cate_dist(data[f"rl_obfu_{i}_new"]["homepage"], filtered_video_ids)
-            bias_obfu_cate, bias_obfu_home_video_ids = get_cate_dist(data[f"rl_obfu_{i}"]["homepage"], filtered_video_ids)
+            rl_obfu_cate, rl_obfu_home_video_ids = get_cate_dist(data[f"pb_obfu_{i}"]["homepage"], filtered_video_ids)
+            bias_base_cate, bias_base_home_video_ids = get_cate_dist(data[f"rand_base_{i}"]["homepage"], filtered_video_ids)
+            bias_obfu_cate, bias_obfu_home_video_ids = get_cate_dist(data[f"bias_obfu_{i}"]["homepage"], filtered_video_ids)
             rand_base_cate, rand_base_home_video_ids = get_cate_dist(data[f"rand_base_{i}"]["homepage"], filtered_video_ids)
             rand_base_cate2, _ = get_cate_dist(data[f"rand_base_{random.randint(0,N-1)}"]["homepage"], filtered_video_ids)
             rand_obfu_cate, rand_obfu_home_video_ids = get_cate_dist(data[f"rand_obfu_{i}"]["homepage"], filtered_video_ids)
@@ -265,6 +309,8 @@ if PHASE == 0:
             for idx in class_id:
                 stat[id2class[idx]] += 1
                 avg_stat["avg_num_class_p"] += rand_base_cate_view[idx]
+            
+            
             # if i < 5:
             #     print(data[f"rand_base_{i}"]["viewed"])
             #     print(data[f"rl_base_{i}"]["viewed"])
@@ -276,28 +322,31 @@ if PHASE == 0:
             rand_avg_kl_view += dist_metric(rand_base_cate, rand_base_cate_view)
 
             save_data[f"rl_base_{i}"] = data[f"rand_base_{i}"]
-            save_data[f"rl_obfu_{i}"] = data[f"rl_obfu_{i}"]
-            save_data[f"bias_obfu_{i}"] = data[f"rl_obfu_{i}"]
+            save_data[f"rl_obfu_{i}"] = data[f"pb_obfu_{i}"]
+            save_data[f"pb_base_{i}"] = data[f"pb_base_{i}"]
+            save_data[f"pb_obfu_{i}"] = data[f"pb_obfu_{i}"]
             save_data[f"rand_base_{i}"] = data[f"rand_base_{i}"]
             save_data[f"rand_obfu_{i}"] = data[f"rand_obfu_{i}"]
 
             save_data[f"rl_base_{i}"]["cate_dist"] = rl_base_cate
             save_data[f"rl_obfu_{i}"]["cate_dist"] = rl_obfu_cate
-            save_data[f"bias_obfu_{i}"]["cate_dist"] = bias_obfu_cate
+            save_data[f"pb_base_{i}"]["cate_dist"] = bias_base_cate
+            save_data[f"pb_obfu_{i}"]["cate_dist"] = bias_obfu_cate
             save_data[f"rand_base_{i}"]["cate_dist"] = rand_base_cate
             save_data[f"rand_obfu_{i}"]["cate_dist"] = rand_obfu_cate
 
-            delta_len = len(data[f"rl_obfu_{i}"]["viewed"]) - len(data[f"rand_base_{i}"]["viewed"])
+            delta_len = len(data[f"rand_obfu_{i}"]["viewed"]) - len(data[f"rand_base_{i}"]["viewed"])
             
             if delta_len > 0:
                 T += delta_len
-                rl_avg_kl += dist_metric(rl_obfu_cate, rand_base_cate)
+                # rand_base_cate = list(avg_obf)
+                rl_avg_kl += dist_metric(rl_obfu_cate, rl_base_cate)
                 bias_avg_kl += dist_metric(bias_obfu_cate, rand_base_cate)
                 rand_avg_kl += dist_metric(rand_obfu_cate, rand_base_cate)
                 base_avg_kl += dist_metric(rand_base_cate2, rand_base_cate)
 
                 rl_avg_l2 += np.sqrt(np.sum((np.array(rand_base_cate) - np.array(rl_obfu_cate)) ** 2))
-                bias_avg_l2 += np.sqrt(np.sum((np.array(rand_base_cate) - np.array(bias_obfu_cate)) ** 2))
+                bias_avg_l2 += np.sqrt(np.sum((np.array(bias_base_cate) - np.array(bias_obfu_cate)) ** 2))
                 rand_avg_l2 += np.sqrt(np.sum((np.array(rand_base_cate) - np.array(rand_obfu_cate)) ** 2))
                 base_avg_l2 += dist_metric((np.array(rl_base_cate) + np.array(rl_base_cate) * 1) / 2, rand_base_cate) # np.sqrt(np.sum((np.array(rand_base_cate) - np.array(rl_base_cate)) ** 2))
 
@@ -366,7 +415,7 @@ if PHASE == 0:
     with open(f"./figs/{VERSION}_metadata.json","w") as json_file:
         json.dump(cate_dist, json_file)
 
-    with open(f"./figs/dataset_{VERSION}.json","w") as json_file:
+    with open(f"./figs/dataset_{VERSION2}.json","w") as json_file:
         json.dump(save_data, json_file)
     
     print(S / N)
@@ -430,8 +479,15 @@ else:
 import matplotlib.pyplot as plt
 
 plt.figure()
-plt.bar([i for i in range(len(stat))], np.log10(list(stat.values())))
+plt.bar([i for i in range(len(stat))], np.array(list(stat.values()))/936)
+plt.xlabel("Video class index")
+plt.ylabel("No. of users who view it frequently")
 plt.savefig("stat.png")
 
+plt.figure()
+plt.bar([i for i in range(len(stat))], np.log10(list(stat.values())))
+plt.xlabel("Video class index")
+plt.ylabel("No. of users who view it frequently ($log_{10}$)")
+plt.savefig("stat2.png")
 # print(avg_stat["avg_num_class"] / N, avg_stat["avg_num_class_p"] / N)
 # print(stat)

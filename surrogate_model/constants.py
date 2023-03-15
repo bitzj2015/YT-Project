@@ -1,7 +1,8 @@
 import json
 import numpy as np
 
-VERSION = "40_June"
+VERSION = "reddit_40_new"
+# VERSION = "40_June"
 TAG = "tags"
 ROOT_PATH = "/project/kpsounis_171"
 ROOT_PATH = "/scratch/YT_dataset"

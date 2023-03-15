@@ -6,10 +6,11 @@ from constants import root_path
 VERSION = "_final_joint_cate_100_2_0.1"
 VERSION = "_final_joint_cate_103_2_test"
 VERSION = "_40_June"
-# VERSION = "_realuser"
+VERSION = "_reddit_40_new"
+VERSION = "_realuser_all"
 LOAD_METADATA = True
 
-with open(f"{root_path}/dataset/video_metadata{VERSION}.json", "r") as json_file:
+with open(f"{root_path}/dataset/video_metadata{VERSION}_new.json", "r") as json_file:
     video_metadata = json.load(json_file)
 
 with open(f"{root_path}/dataset/video_stat{VERSION}.json", "r") as json_file:

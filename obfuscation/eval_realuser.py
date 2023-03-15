@@ -18,7 +18,7 @@ import ray
 parser = argparse.ArgumentParser(description='run regression.')
 parser.add_argument('--video-emb', dest="video_emb_path", type=str, default=f"{root_path}/dataset/video_embeddings_{VERSION}_aug.hdf5")
 parser.add_argument('--video-id', dest="video_id_path", type=str, default=f"{root_path}/dataset/video_ids_{VERSION}.json")
-parser.add_argument('--test-data', dest="test_data_path", type=str, default=f"{root_path}/dataset/sock_puppets_{VERSION}{TAG}.json")
+parser.add_argument('--test-data', dest="test_data_path", type=str, default=f"../dataset/sock_puppets_{VERSION}{TAG}.json")
 parser.add_argument('--agent-path', dest="agent_path", type=str, default="./param/agent.pkl")
 parser.add_argument('--denoiser-path', dest="denoiser_path", type=str, default="./param/denoiser_0.2_v2_kldiv.pkl")
 parser.add_argument('--alpha', dest="alpha", type=float, default=0.2)
@@ -74,6 +74,16 @@ all_ids = list(VIDEO_IDS.keys())
 for i in range(len(VIDEO_IDS.keys())):
     ID2VIDEO[str(VIDEO_IDS[all_ids[i]])] = all_ids[i]
 
+VIDEO_BY_CATE = {}
+
+for video_id in VIDEO_METADATA.keys():
+    try:
+        cate =  VIDEO_CLASS[video_id]
+        if cate not in VIDEO_BY_CATE.keys():
+            VIDEO_BY_CATE[cate] = []
+        VIDEO_BY_CATE[cate].append(VIDEO_IDS[video_id])
+    except:
+        continue
 
 # Load yt surrogate model
 yt_model = torch.load(
@@ -133,7 +143,7 @@ rl_agent.model.video_embeddings = video_embeddings.to(device)
 
 # Initialize envrionment and workers
 workers = [RolloutWorker.remote(env_args, i) for i in range(env_args.num_browsers)]
-env = Env(env_args, yt_model, denoiser, rl_agent, workers, seed=0, id2video_map=ID2VIDEO, use_rand=args.use_rand)
+env = Env(env_args, yt_model, denoiser, rl_agent, workers, seed=0, id2video_map=ID2VIDEO, use_rand=args.use_rand, video_by_cate=VIDEO_BY_CATE)
 # env.denoiser.denoiser_model.load_state_dict(torch.load(args.denoiser_path, map_location=device))
 
 # Start testing
@@ -146,7 +156,7 @@ for ep in range(1):
     # Update denoiser
         
     for i in range(len(test_inputs) // env_args.num_browsers):
-        ray.get([env.workers[j].update_user_videos.remote(test_inputs[i * env_args.num_browsers + j]) for j in range(env_args.num_browsers)])
+        ray.get([env.workers[j].update_user_videos.remote(test_inputs[i * env_args.num_browsers + j], video_embeddings.shape[0]) for j in range(env_args.num_browsers)])
         # try:
         # One episode training
         env.start_env()

@@ -94,7 +94,7 @@ if not args.eval:
     # Initialize envrionment and workers
     workers = [RolloutWorker.remote(env_args, i) for i in range(env_args.num_browsers)]
     env = Env(env_args, yt_model, denoiser, rl_agent, workers, seed=0, id2video_map=ID2VIDEO, use_rand=args.use_rand)
-    rl_agent.model.load_state_dict(torch.load("./param/agent_0.2_v2_kldiv.pkl", map_location=device))
+    # rl_agent.model.load_state_dict(torch.load("./param/agent_0.2_v2_kldiv.pkl", map_location=device))
     
     # Start RL agent training loop
     losses = []
@@ -111,7 +111,7 @@ if not args.eval:
         # Update obfuscator (rl agent)
         env.rl_agent.train()
         for i in range(n_steps):
-            ray.get([env.workers[j].update_user_videos.remote(train_inputs[i * env_args.num_browsers + j].tolist()) for j in range(env_args.num_browsers)])
+            ray.get([env.workers[j].update_user_videos.remote(train_inputs[i * env_args.num_browsers + j].tolist(), video_embeddings.shape[0]) for j in range(env_args.num_browsers)])
 
             # One episode training
             env.start_env()
@@ -133,7 +133,7 @@ if not args.eval:
         # Start testing
         env.rl_agent.eval()
         for i in range(test_inputs.shape[0] // env_args.num_browsers):
-            ray.get([env.workers[j].update_user_videos.remote(test_inputs[i * env_args.num_browsers + j].tolist()) for j in range(env_args.num_browsers)])
+            ray.get([env.workers[j].update_user_videos.remote(test_inputs[i * env_args.num_browsers + j].tolist(), video_embeddings.shape[0]) for j in range(env_args.num_browsers)])
 
             # One episode evaluation
             env.start_env()
@@ -169,7 +169,7 @@ else:
     
     # Initialize envrionment and workers
     workers = [RolloutWorker.remote(env_args, i) for i in range(env_args.num_browsers)]
-    env = Env(env_args, yt_model, denoiser, rl_agent, workers, seed=0, id2video_map=ID2VIDEO, use_rand=args.use_rand)
+    env = Env(env_args, yt_model, denoiser, rl_agent, workers, seed=0, id2video_map=ID2VIDEO, use_rand=args.use_rand, video_by_cate=VIDEO_BY_CATE)
     # env.denoiser.denoiser_model.load_state_dict(torch.load(args.denoiser_path, map_location=device))
 
     # Start testing
@@ -188,24 +188,25 @@ else:
             env_args.logger.info(f"Testing denoiser failed")
             
         for i in range(test_inputs.shape[0] // env_args.num_browsers):
-            ray.get([env.workers[j].update_user_videos.remote(test_inputs[i * env_args.num_browsers + j].tolist()) for j in range(env_args.num_browsers)])
+            ray.get([env.workers[j].update_user_videos.remote(test_inputs[i * env_args.num_browsers + j].tolist(), video_embeddings.shape[0]) for j in range(env_args.num_browsers)])
             # try:
             # One episode training
-            env.start_env()
-            loss, reward = env.rollout(train_rl=False)
-            losses.append(loss)
-            rewards.append(reward)
+            for _ in range(1):
+                env.start_env()
+                loss, reward = env.rollout(train_rl=False)
+                losses.append(loss)
+                rewards.append(reward)
             
-            if i % 10 == 0:
+            # if i % 10 == 0:
                 env_args.logger.info(f"Test epoch: {ep}, episode: {i}, loss: {loss}, reward: {reward}")
-            env.get_watch_history_from_workers()
-            for j in range(len(env.all_watch_history_base)):
-                test_results["base"][str(user_count)] = [ID2VIDEO[str(video_id)] for video_id in env.all_watch_history_base[j]]
-                test_results["obfu"][str(user_count)] = [ID2VIDEO[str(video_id)] for video_id in env.all_watch_history[j]]
-                user_count += 1
-            all_watch_history = ray.get([worker.get_watch_history.remote() for worker in env.workers])
-            print(all_watch_history[0])
-            env.stop_env(save_param=False)
+                env.get_watch_history_from_workers()
+                for j in range(len(env.all_watch_history_base)):
+                    test_results["base"][str(user_count)] = [ID2VIDEO[str(video_id)] for video_id in env.all_watch_history_base[j]]
+                    test_results["obfu"][str(user_count)] = [ID2VIDEO[str(video_id)] for video_id in env.all_watch_history[j]]
+                    user_count += 1
+                all_watch_history = ray.get([worker.get_watch_history.remote() for worker in env.workers])
+                # print(all_watch_history[0])
+                env.stop_env(save_param=False)
             # except:
             #     continue
         with open(f"./results/test_log_{args.alpha}_{args.version}_{args.use_rand}.json", "w") as json_file:

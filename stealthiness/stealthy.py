@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import random
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
@@ -52,6 +53,7 @@ class StealthyNet(torch.nn.Module):
         # print("logits: ", logits.size(), label_ru.size())
         
         # Get softmax and logits
+        label = label.to(self.device)
         logits = label * logits
         logits = logits.sum(-1)
         
@@ -104,7 +106,7 @@ class StealthyDataset(Dataset):
             idx = idx.item()
 
         sample = {
-            "input": torch.from_numpy(np.array(self.persona[idx]).astype("int32")), 
+            "input": torch.from_numpy(np.array(self.persona[idx] + [0 for _ in range(self.max_len - len(self.persona[idx]))]).astype("int32")), 
             "label": torch.from_numpy(np.array(self.label[idx]).astype("float32"))
         }
         return sample
@@ -168,6 +170,10 @@ class Stealthy(object):
         return loss_all / (i+1), avg_acc_all / count_all[0], precision, recall, precision * recall / (precision + recall + 0.0001) * 2
 
 def get_stealthy_dataset(base_persona, obfu_persona, batch_size=50, max_len=50):
+    c = list(zip(base_persona, obfu_persona))
+    random.shuffle(c)
+    base_persona, obfu_persona = zip(*c)
+
     train_size = int(len(base_persona) * 0.7)
     val_size = int(len(base_persona) * 0.8)
     print(train_size, len(base_persona), len(obfu_persona))
@@ -178,6 +184,30 @@ def get_stealthy_dataset(base_persona, obfu_persona, batch_size=50, max_len=50):
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
     test_dataset = StealthyDataset(base_persona[val_size:], obfu_persona[val_size:], max_len)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    return train_loader, val_loader, test_loader
+
+
+def get_stealthy_dataset_v2(persona, base_persona, obfu_persona, batch_size=50, max_len=50):
+    c = list(zip(base_persona, obfu_persona))
+    random.shuffle(c)
+    base_persona, obfu_persona = zip(*c)
+    base_persona = list(base_persona)
+    obfu_persona = list(obfu_persona)
+
+    train_size = int(len(base_persona) * 0.7)
+    val_size = int(len(base_persona) * 0.8)
+    test_size = int(len(base_persona) * 0.2)
+    print(train_size, len(base_persona), len(obfu_persona), len(persona))
+
+    train_dataset = StealthyDataset(base_persona[:train_size], obfu_persona[:train_size], max_len)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+    val_dataset = StealthyDataset(base_persona[train_size:val_size], obfu_persona[train_size:val_size], max_len)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
+    test_dataset = StealthyDataset(base_persona[-test_size:] + persona, obfu_persona[-test_size:], max_len)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     return train_loader, val_loader, test_loader

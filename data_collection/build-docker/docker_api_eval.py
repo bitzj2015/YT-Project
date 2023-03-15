@@ -51,7 +51,7 @@ class docker_api(object):
         return 1 
 
 
-def run_docker(user_video_seqs, dump_root="/home/user/Desktop/crawls", real_root="$PWD/docker-volume/crawls_reddit", timeout=45, image="ytdriver:old", shm_size="512m", logger=None):
+def run_docker(user_video_seqs, dump_root="/home/user/Desktop/crawls", real_root="$PWD/docker-volume/crawls_reddit", timeout=45, image="ytdriver:latest", shm_size="512m", logger=None):
     d_api = []
     for user_key in user_video_seqs:
         cfg = {}
@@ -109,45 +109,45 @@ if __name__ == "__main__":
 
         for i in tqdm(range(len(batch))):
             ray.init()
-            run_docker(batch[i], logger=logger, real_root="$PWD/docker-volume/crawls_reddit_25_new", timeout=25)
+            run_docker(batch[i], logger=logger, real_root="$PWD/docker-volume/crawls_reddit_35_new", timeout=35)
             ray.shutdown()
             os.system("yes | sudo docker container prune")
 
     elif task == "rl_eval":
-        # tag = "final_with_graph"
-        # with open(f"../obfuscation/results/test_user_trace_0.2_final_with_graph_test_0_new.json", "r") as json_file:
-        #     rl_user_data = json.load(json_file)
+        tag = "final_with_graph"
+        with open(f"../obfuscation/results/test_user_trace_0.2_final_with_graph_test_0_new.json", "r") as json_file:
+            rl_user_data = json.load(json_file)
 
-        # with open(f"../obfuscation/results/test_user_trace_0.2_final_with_graph2_test_0_new.json", "r") as json_file:
-        #     rand_user_data = json.load(json_file)
+        with open(f"../obfuscation/results/test_user_trace_0.2_final_with_graph2_test_0_new.json", "r") as json_file:
+            rand_user_data = json.load(json_file)
 
-        # batch = []
-        # for k in range(38-6):
-        #     i = k + 6
-        #     video_seqs = {}
-        #     for j in range(25):
-        #         if i*25+j >= 1500:
-        #             break
-        #         video_seqs[f"rl_graph_base_{i*25+j}"] = rl_user_data["base"][str(i*25+j)]
-        #         video_seqs[f"rl_graph_obfu_{i*25+j}"] = rl_user_data["obfu"][str(i*25+j)]
-        #         video_seqs[f"rl_graph2_base_{i*25+j}"] = rand_user_data["base"][str(i*25+j)]
-        #         video_seqs[f"rl_graph2_obfu_{i*25+j}"] = rand_user_data["obfu"][str(i*25+j)]
-        #     batch.append(video_seqs)
+        batch = []
+        for k in range(38-6):
+            i = k + 6
+            video_seqs = {}
+            for j in range(35):
+                if i*35+j >= 1500:
+                    break
+                video_seqs[f"rl_graph_base_{i*35+j}"] = rl_user_data["base"][str(i*35+j)]
+                video_seqs[f"rl_graph_obfu_{i*35+j}"] = rl_user_data["obfu"][str(i*35+j)]
+                video_seqs[f"rl_graph2_base_{i*35+j}"] = rand_user_data["base"][str(i*35+j)]
+                video_seqs[f"rl_graph2_obfu_{i*35+j}"] = rand_user_data["obfu"][str(i*35+j)]
+            batch.append(video_seqs)
     
-        # logging.basicConfig(
-        #     filename=f"./logs/log.txt",
-        #     filemode='w',
-        #     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-        #     datefmt='%H:%M:%S',
-        #     level=logging.INFO
-        # )
-        # logger=logging.getLogger() 
-        # logger.setLevel(logging.INFO)
+        logging.basicConfig(
+            filename=f"./logs/log.txt",
+            filemode='w',
+            format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+            datefmt='%H:%M:%S',
+            level=logging.INFO
+        )
+        logger=logging.getLogger() 
+        logger.setLevel(logging.INFO)
 
-        # for i in tqdm(range(len(batch))):
-        #     ray.init()
-        #     run_docker(batch[i], logger=logger, real_root=f"$PWD/docker-volume/crawls_{tag}", timeout=50)
-        #     ray.shutdown()
+        for i in tqdm(range(len(batch))):
+            ray.init()
+            run_docker(batch[i], logger=logger, real_root=f"$PWD/docker-volume/crawls_{tag}", timeout=50)
+            ray.shutdown()
 
         # tag1 = "final_joint_cate_100_2_test" # test_user_trace_0.2_final_joint_cate_109_2_test_0_new.json
         # tag2 = "final_joint_cate_103_2_test"
@@ -194,22 +194,22 @@ if __name__ == "__main__":
         #         # video_seqs[f"bias_obfu_{i*25+j}"] = bias_user_data["obfu"][str(i*25+j)]
         #     batch.append(video_seqs)
 
-        # logging.basicConfig(
-        #     filename=f"./logs/log.txt",
-        #     filemode='w',
-        #     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-        #     datefmt='%H:%M:%S',
-        #     level=logging.INFO
-        # )
-        # logger=logging.getLogger() 
-        # logger.setLevel(logging.INFO)
+        logging.basicConfig(
+            filename=f"./logs/log.txt",
+            filemode='w',
+            format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+            datefmt='%H:%M:%S',
+            level=logging.INFO
+        )
+        logger=logging.getLogger() 
+        logger.setLevel(logging.INFO)
 
-        # for i in tqdm(range(len(batch))):
-        #     ray.init()
-        #     run_docker(batch[i], logger=logger, real_root=f"$PWD/docker-volume/crawls_{tag}", timeout=150)
-        #     ray.shutdown()
+        for i in tqdm(range(len(batch))):
+            ray.init()
+            run_docker(batch[i], logger=logger, real_root=f"$PWD/docker-volume/crawls_{tag}", timeout=150)
+            ray.shutdown()
 
-        # for tag in ["0.2_v2_kldiv_0.2_test"]:
+        # for tag in ["0.3_v2_kldiv_0.3_test", "0.5_v2_kldiv_0.5_test", "0.2_v2_kldiv_0.2_test"]:
         
         #     with open(f"../obfuscation/results/test_user_trace_{tag}_0_0_new.json", "r") as json_file:
         #         rl_user_data = json.load(json_file)
@@ -220,18 +220,17 @@ if __name__ == "__main__":
         #     with open(f"../obfuscation/results/test_user_trace_{tag}_2_2_new.json", "r") as json_file:
         #         bias_user_data = json.load(json_file)
 
-        #     print(len(rl_user_data))
         #     batch = []
-        #     for i in range(40):
+        #     for i in range(25):
         #         video_seqs = {}
-        #         for j in range(25):
-        #             # if i*25+j < 140:
-        #             #     continue
-        #             video_seqs[f"rl_base_{i*25+j}"] = rl_user_data["base"][str(i*25+j)]
-        #             video_seqs[f"rl_obfu_{i*25+j}"] = rl_user_data["obfu"][str(i*25+j)]
-        #             video_seqs[f"rand_base_{i*25+j}"] = rand_user_data["base"][str(i*25+j)]
-        #             video_seqs[f"rand_obfu_{i*25+j}"] = rand_user_data["obfu"][str(i*25+j)]
-        #             video_seqs[f"bias_obfu_{i*25+j}"] = bias_user_data["obfu"][str(i*25+j)]
+        #         for j in range(35):
+        #             if i*35+j < 140:
+        #                 continue
+        #             # video_seqs[f"rl_base_{i*35+j}"] = rl_user_data["base"][str(i*35+j)]
+        #             video_seqs[f"rl_obfu_{i*35+j}"] = rl_user_data["obfu"][str(i*35+j)]
+        #             video_seqs[f"rand_base_{i*35+j}"] = rand_user_data["base"][str(i*35+j)]
+        #             video_seqs[f"rand_obfu_{i*35+j}"] = rand_user_data["obfu"][str(i*35+j)]
+        #             video_seqs[f"bias_obfu_{i*35+j}"] = bias_user_data["obfu"][str(i*35+j)]
         #         batch.append(video_seqs)
         
         #     logging.basicConfig(
@@ -246,42 +245,5 @@ if __name__ == "__main__":
 
         #     for i in tqdm(range(len(batch))):
         #         ray.init()
-        #         run_docker(batch[i], logger=logger, real_root=f"$PWD/docker-volume/crawls_{tag}_feb", timeout=80)
+        #         run_docker(batch[i], logger=logger, real_root=f"$PWD/docker-volume/crawls_{tag}", timeout=80)
         #         ray.shutdown()
-
-        # for tag in ["0.2_v2_kldiv_pbooster_3_new", "0.3_v2_kldiv_pbooster_0.3_3_new", "0.5_v2_kldiv_pbooster_0.5_3_new"]:
-        
-        # for tag in ["0.7_v2_kldiv_feb_0.7_0_new"]:
-        # for tag in ["0.2_v2_kldiv_pbooster_reddit_0.2_3_new"]:
-        # for tag in ["0.5_realuser_0_new"]:
-        for tag in ["0.2_realuser_pbooster_3_new"]:
-    
-            with open(f"../obfuscation/results/test_user_trace_{tag}.json", "r") as json_file:
-                bias_user_data = json.load(json_file)
-
-            batch = []
-            for i in range(20):
-                video_seqs = {}
-                for j in range(50):
-                    try:
-                        video_seqs[f"bias_base_{i*50+j}"] = bias_user_data["base"][str(i*50+j)]
-                        video_seqs[f"bias_obfu_{i*50+j}"] = bias_user_data["obfu"][str(i*50+j)]
-                    except:
-                        continue
-                    # print(len(bias_user_data["base"][str(i*50+j)]), len(bias_user_data["obfu"][str(i*50+j)]))
-                batch.append(video_seqs)
-        
-            logging.basicConfig(
-                filename=f"./logs/log.txt",
-                filemode='w',
-                format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-                datefmt='%H:%M:%S',
-                level=logging.INFO
-            )
-            logger=logging.getLogger() 
-            logger.setLevel(logging.INFO)
-
-            for i in tqdm(range(len(batch))):
-                ray.init()
-                run_docker(batch[i], logger=logger, real_root=f"$PWD/docker-volume/crawls_{tag}_v2", timeout=150)
-                ray.shutdown()

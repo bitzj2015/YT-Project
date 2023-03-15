@@ -22,12 +22,12 @@ VERSION = "latest_joint_cate_010_0.3"
 VERSION = "40_June"
 VERSION = "realuser_0.2_test_reload"
 VERSION = "v1_binary_0.2_test"
-VERSION = "realuser"
+VERSION = "realuser_all"
 TYPE = ""
 # TYPE = "_large"
 MAX_LEN = 256
 
-with open(f"{root_path}/dataset/video_metadata_{VERSION}.json", "r") as json_file:
+with open(f"{root_path}/dataset/video_metadata_{VERSION}_new.json", "r") as json_file:
     video_metadata = json.load(json_file)
 
 with open(f"{root_path}/dataset/video_stat_{VERSION}.json", "r") as json_file:

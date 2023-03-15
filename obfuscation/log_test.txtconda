@@ -1,0 +1,17 @@
+451767
+Traceback (most recent call last):
+  File "train_joint.py", line 6, in <module>
+    from env_joint import *
+  File "/home/jiangzha/workspace/YT-Project/obfuscation/env_joint.py", line 5, in <module>
+    from constants import *
+  File "/home/jiangzha/workspace/YT-Project/obfuscation/constants.py", line 26, in <module>
+    video_graph_adj_mat = json.load(json_file)
+  File "/home/jiangzha/anaconda3/envs/ML/lib/python3.8/json/__init__.py", line 293, in load
+    return loads(fp.read(),
+  File "/home/jiangzha/anaconda3/envs/ML/lib/python3.8/json/__init__.py", line 357, in loads
+    return _default_decoder.decode(s)
+  File "/home/jiangzha/anaconda3/envs/ML/lib/python3.8/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "/home/jiangzha/anaconda3/envs/ML/lib/python3.8/json/decoder.py", line 353, in raw_decode
+    obj, end = self.scan_once(s, idx)
+KeyboardInterrupt

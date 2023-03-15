@@ -17,12 +17,14 @@ logger=logging.getLogger()
 logger.setLevel(logging.INFO) 
 
 VERSION = "_rl_final_new2_cate_test4"
-FILTER = ""
+TAG = ""
 VERSION = "_reddit"
-# FILTER = "_filter"
+# TAG = "_TAG"
 VERSION = "_realuser"
 VERSION = "_40"
-FILTER = "tags"
+VERSION = "_reddit_40_new"
+
+TAG = "tags"
 
 with open(f"{root_path}/dataset/sock_puppets{VERSION}.json", "r") as json_file:
     data = json.load(json_file)[2]["data"]
@@ -233,7 +235,7 @@ for i in tqdm(range(len(data))):
     # last_cate_dict = list(last_cate_dict.keys())[:20]
 
     total_f = sum(list(last_cate_dict.values()))
-    print(len(last_cate_dict))
+
     for cate in last_cate_dict.keys():
         last_label[class2id[cate]] = last_cate_dict[cate] / total_f
 
@@ -279,7 +281,7 @@ logger.info("Input: {}, label: {}, label_type: {}, mask: {}, last_label: {}, las
     np.shape(last_label_type_all))
 )
 
-hf = h5py.File(f"{root_path}/dataset/train_data{VERSION}{FILTER}.hdf5", "w")
+hf = h5py.File(f"{root_path}/dataset/train_data{VERSION}{TAG}.hdf5", "w")
 hf.create_dataset('input', data=input_data_all[idx[:train_size]])
 hf.create_dataset('label', data=label_data_all[idx[:train_size]])
 hf.create_dataset('label_type', data=label_type_data_all[idx[:train_size]])
@@ -288,7 +290,7 @@ hf.create_dataset('last_label_type', data=last_label_type_all[idx[:train_size]])
 hf.create_dataset('mask', data=mask_data_all[idx[:train_size]])
 hf.close()
 
-hf = h5py.File(f"{root_path}/dataset/test_data{VERSION}{FILTER}.hdf5", "w")
+hf = h5py.File(f"{root_path}/dataset/test_data{VERSION}{TAG}.hdf5", "w")
 hf.create_dataset('input', data=input_data_all[idx[train_size:]])
 hf.create_dataset('label', data=label_data_all[idx[train_size:]])
 hf.create_dataset('label_type', data=label_type_data_all[idx[train_size:]])
@@ -306,5 +308,5 @@ for i in range(train_size):
         home_video_id[video_id] += 1
 
 home_video_id_sorted = {k: v for k, v in sorted(home_video_id.items(), key=lambda item: item[1], reverse=True)}
-with open(f"{root_path}/dataset/home_video_id_sorted{VERSION}{FILTER}.json", "w") as json_file:
+with open(f"{root_path}/dataset/home_video_id_sorted{VERSION}{TAG}.json", "w") as json_file:
     json.dump(home_video_id_sorted, json_file)

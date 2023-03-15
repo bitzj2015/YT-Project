@@ -16,19 +16,27 @@ parser.add_argument('--alpha', dest="alpha", type=str, default="0.2")
 parser.add_argument('--use-base', dest="use_base", default=False, action='store_true')
 args = parser.parse_args()
 
-tag = "final_joint_cate_100_2_test"
+# tag = "final_joint_cate_100_2_test"
 # tag = "final_joint_cate_103_2_test"
-tag = "realuser_0.2_test"
-tag_base = "realuser"
+# tag = "realuser_0.2_test"
+# tag_base = "realuser"
 # tag = "latest_joint_cate_010_reddit3_0.2"
 # tag_base = "reddit_40"
-tag = "latest_joint_cate_010"
-tag_base = "40"
-tag = "v1_binary_0.2_test"
+# tag = "latest_joint_cate_010"
+# tag_base = "40"
+# tag = "v1_binary_0.2_test"
 # tag = "0.2_v2_kldiv_0.2_test_0.2_test"
 ALPHA = args.version.split("_")[0]
 tag = f"{ALPHA}_v2_kldiv_{ALPHA}_test"
-tag_base = "40_June"
+tag = "0.3_v2_kldiv_pbooster_0.3_3_new"
+tag = "0.2_v2_kldiv_pbooster_reddit_0.2_3_new_v2"
+tag_base = "reddit_40_new"
+# tag_base = "40_June"
+
+# tag = f"{ALPHA}_v2_kldiv_reddit2_test"
+# tag_base = "reddit_40_new"
+# tag = "realuser_all"
+# tag_base = "realuser_all"
 
 
 with open(f"../obfuscation/figs/dataset_{tag}.json", "r") as json_file:
@@ -61,24 +69,24 @@ obfu_rec = []
 MAX_LEN = 0
 TYPE = args.version.split("_")[1]
 for i in range(1050):
-    try:
-        base_persona.append([video_ids[video] for video in data[f"rand_base_{i}"]["viewed"]])
-        base_rec.append(data[f"rand_base_{i}"]["cate_dist"])
+    # try:
+    base_persona.append([video_ids[video] for video in data[f"{TYPE}_base_{i}"]["viewed"]])
+    base_rec.append(data[f"{TYPE}_base_{i}"]["cate_dist"])
 
-        obfu_persona.append([video_ids[video] for video in data[f"{TYPE}_obfu_{i}"]["viewed"]])
-        obfu_rec.append(data[f"{TYPE}_obfu_{i}"]["cate_dist"])
-        if len(obfu_persona[-1]) > MAX_LEN:
-            MAX_LEN = len(obfu_persona[-1])
+    obfu_persona.append([video_ids[video] for video in data[f"{TYPE}_obfu_{i}"]["viewed"]])
+    obfu_rec.append(data[f"{TYPE}_obfu_{i}"]["cate_dist"])
+    if len(obfu_persona[-1]) > MAX_LEN:
+        MAX_LEN = len(obfu_persona[-1])
 
         # base_persona.append([video_ids[video] for video in data[f"rand_base_{i}"]["viewed"]])
         # base_rec.append(data[f"rand_base_{i}"]["cate_dist"])
 
         # obfu_persona.append([video_ids[video] for video in data[f"rand_obfu_{i}"]["viewed"]])
         # obfu_rec.append(data[f"rand_obfu_{i}"]["cate_dist"])
-    except:
-        continue
+    # except:
+    #     continue
 
-
+print(len(base_persona))
 
 with h5py.File(f"/scratch/YT_dataset/dataset/video_embeddings_{tag_base}_aug.hdf5", "r") as hf_emb:
     video_embeddings = hf_emb["embeddings"][:].astype("float32")
@@ -95,7 +103,7 @@ for t in range(3):
 
     if not EVAL:
         best_kl = 10
-        for ep in range(50):
+        for ep in range(20):
             logger.info(f"Training epoch: {ep}")
             denoiser.train(train_dataloader)
             logger.info(f"Testing epoch: {ep}")

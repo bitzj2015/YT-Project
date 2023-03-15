@@ -19,7 +19,9 @@ class RolloutWorker(object):
         self.user_step = 0
         self.step = 0
         self.user_videos = []
+        self.bias_weight = []
         self.user_id = user_id
+        self.cur_trace_id = 0
         logging.basicConfig(
             filename=f"./logs/log_train_regression_{self.env_args.alpha}_{self.env_args.version}.txt",
             filemode='a',
@@ -30,8 +32,15 @@ class RolloutWorker(object):
         self.logger=logging.getLogger() 
         self.logger.setLevel(logging.INFO)
         
-    def update_user_videos(self, user_videos):
+    def update_user_videos(self, user_videos, num_obf_video):
         self.user_videos = user_videos
+        self.bias_weight = [0.1 for _ in range(num_obf_video)]
+
+    def get_bias_weight(self):
+        return [p / sum(self.bias_weight) for p in self.bias_weight]
+
+    def update_bias_weight(self, video, reward):
+        self.bias_weight[video] += reward
         
     def initial_profile(self, initial_len=5):
         self.watch_history_base = self.user_videos[: initial_len]
@@ -58,9 +67,13 @@ class RolloutWorker(object):
             video = obfuscation_video
             self.watch_history_type.append(1)
         self.watch_history.append(video)
-        # print(len(self.watch_history_base), len(self.watch_history))
         self.step += 1
         return True
+
+    def re_rollout(self, obfuscation_video):
+        assert self.watch_history_type[-1] == 1
+        self.watch_history[-1] = obfuscation_video
+
 
     def get_state(self, his_len=10):
         return np.array(self.watch_history[:])

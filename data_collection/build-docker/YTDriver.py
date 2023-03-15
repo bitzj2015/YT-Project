@@ -12,7 +12,10 @@ class Video:
     def __init__(self, elem, url):
         self.elem = elem
         self.url = url
-        self.videoId = re.search(r'\?v=(.*)?$', url).group(1).split('&')[0]
+        try:
+            self.videoId = re.search(r'\?v=(.*)?$', url).group(1).split('&')[0]
+        except:
+            self.videoId = url
    
     def get_metadata(self):
         r = requests.get('https://rostam.idav.ucdavis.edu/noyce/getMetadata/%s' % self.videoId)
@@ -107,7 +110,7 @@ class YTDriver:
                 self.__log("Get 0 homepage video, so try again...")
         return homepage
     
-    def play_video(self, video, duration=5):
+    def play_video(self, video, duration=5, dislike=False):
         # this function returns when the video starts playing
         try:
             ret = self.__click_video(video)
@@ -118,6 +121,8 @@ class YTDriver:
             self.__handle_ads()
             self.__clear_prompts()
             sleep(duration)
+            if dislike:
+                self.__click_dislike_button()
             # self.__click_stop_button()
         except Exception as e:
             self.__log(e)
@@ -224,6 +229,10 @@ class YTDriver:
         # switch to it.
         assert len(self.driver.window_handles) == 1
         self.driver.switch_to.window(self.driver.window_handles[0])
+
+    def __click_dislike_button(self):
+        el = self.driver.find_element(By.CSS_SELECTOR, '[aria-label="Dislike this video"]')
+        el.click()
 
     def __click_play_button(self):
         try:

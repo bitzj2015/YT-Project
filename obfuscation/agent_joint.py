@@ -119,7 +119,7 @@ class Agent(object):
                 self.values[i].data
             gae = gae * GAMMA * T + delta_t
             policy_loss = policy_loss - self.log_probs[i] * gae -\
-                    0.03 * self.entropies[i]
+                    0.1 * self.entropies[i]
         self.optimizer.zero_grad()
 
         loss = policy_loss.sum() + 1 * value_loss.sum()

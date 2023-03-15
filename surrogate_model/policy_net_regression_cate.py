@@ -77,15 +77,15 @@ class PolicyNetRegression(torch.nn.Module):
         # batch_size * hidden_dim -> batch_size * num_classes
         outputs = self.linear(outputs)
         prob = F.softmax(outputs, -1)
-        prob = prob * (prob > 1e-4)
-        logits = torch.log(prob + 1e-9)
+        # prob = prob * (prob > 1e-4)
+        logits = torch.log(prob)
         
-        loss = prob * (logits - torch.log(label + 1e-9))
+        loss = prob * (logits - torch.log(last_label + 1e-4))
         # loss = (label + 1e-9) * (torch.log(label + 1e-9) - logits)
         loss = loss.sum(-1)
         loss = loss.mean(0)
         # loss = self.kl_loss(outputs, label)
-        print(loss, self.kl_loss(torch.log(prob[:-10] + 1e-9), prob[10:]))
+        # print(loss, self.kl_loss(torch.log(prob[:-10] + 1e-9), prob[10:]))
 
         return loss, 0, batch_size, 0, 0, 0
 

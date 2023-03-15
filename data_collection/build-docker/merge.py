@@ -35,15 +35,9 @@ puppet = [
 # VERSION = "realuser_0.2_test_v2"
 # VERSION = "0.2_v2_kldiv_0.2_test"
 # VERSION = "realuser"
-# VERSION = "v2_kldiv_sensitive"
+VERSION = "v2_kldiv_sensitive"
 # VERSION = "0.2_v2_kldiv_reddit2_test"
 # VERSION = "realuser_all"
-VERSION = "0.5_v2_kldiv_pbooster_0.5_3_new_v2"
-VERSION = "0.7_v2_kldiv_feb_0.7_0_new_v2"
-VERSION = "0.2_v2_kldiv_pbooster_reddit_0.2_3_new_v2"
-VERSION = "0.5_realuser_0_new_v2"
-VERSION = "0.2_realuser_pbooster_3_new_v2"
-
 
 root_dir = f"./docker-volume/crawls_{VERSION}"
 LOAD = False

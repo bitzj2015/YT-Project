@@ -5,40 +5,49 @@ import torch
 import torch.optim as optim
 import logging
 import argparse
+import numpy as np
+torch.random.manual_seed(1024)
 
 # Define arguments for training script
 parser = argparse.ArgumentParser(description='run regression.')
 parser.add_argument('--version', dest="version", type=str, default="base3")
+parser.add_argument('--alpha', dest="alpha", type=str, default="0.2")
 parser.add_argument('--use-base', dest="use_base", default=False, action='store_true')
 args = parser.parse_args()
 
-tag = "final_joint_cate_100_2_0.1"
-tag = "final_joint_cate_100_2_test"
-tag = "latest_joint_cate_010"
-tag_base = "40"
-alpha = 0.3
-
+ALPHA = args.alpha
+tag = f"{ALPHA}_v2_kldiv_{ALPHA}_test"
+tag_base = "40_June"
 # with open(f"../obfuscation/figs/dataset_{tag}.json", "r") as json_file:
 #     data = json.load(json_file)
 
-with open(f"../obfuscation/results/test_user_trace_{alpha}_{tag}_0_new.json", "r") as json_file:
+with open(f"../obfuscation/results/test_user_trace_{tag}_0_0_new.json", "r") as json_file:
     rl_user_data = json.load(json_file)
 
-with open(f"../obfuscation/results/test_user_trace_{alpha}_{tag}_1_new.json", "r") as json_file:
+with open(f"../obfuscation/results/test_user_trace_{tag}_1_1_new.json", "r") as json_file:
     rand_user_data = json.load(json_file)
 
-with open(f"../obfuscation/results/test_user_trace_{alpha}_{tag}_2_new.json", "r") as json_file:
+with open(f"../obfuscation/results/test_user_trace_{tag}_2_2_new.json", "r") as json_file:
     bias_user_data = json.load(json_file)
-print(len(rl_user_data["base"]))
+
+with open(f"../obfuscation/results/test_user_trace_0.5_v2_kldiv_pbooster_0.5_3_new.json", "r") as json_file:
+    rl_user_data = json.load(json_file)
+
+with open(f"../obfuscation/results/test_user_trace_0.3_v2_kldiv_pbooster_0.3_3_new.json", "r") as json_file:
+    rand_user_data = json.load(json_file)
+
+with open(f"../obfuscation/results/test_user_trace_0.2_v2_kldiv_pbooster_3_new.json", "r") as json_file:
+    bias_user_data = json.load(json_file)
+
 data = {}
-for i in range(1900):
+for i in range(1800):
     data[f"rl_base_{i}"] = rl_user_data["base"][str(i)]
     data[f"rl_obfu_{i}"] = rl_user_data["obfu"][str(i)]
     data[f"rand_base_{i}"] = rand_user_data["base"][str(i)]
     data[f"rand_obfu_{i}"] = rand_user_data["obfu"][str(i)]
     data[f"bias_obfu_{i}"] = bias_user_data["obfu"][str(i)]
 
-with open(f"../dataset/video_ids_{tag_base}.json", "r") as json_file:
+with open(f"/scratch/YT_dataset/dataset/video_ids_{tag_base}.json", "r") as json_file:
     video_ids = json.load(json_file)
 
 use_cuda = False
@@ -85,8 +94,18 @@ for method in ["rand", "bias", "rl"]:
                 
         obfu_persona.append(obfu_videos)
         obfu_rec.append(obfu_video_labels)
-        # except:
-        #     continue
+
+        obfu_videos = []
+        obfu_video_labels = []
+        tmp = 0
+        shift_i = 0
+        for j in range(len(base_videos)):
+            video = base_videos[j]
+            obfu_videos.append(video_ids[video])
+            obfu_video_labels.append([0,1])
+                
+        obfu_persona.append(obfu_videos)
+        obfu_rec.append(obfu_video_labels)
 
 
     train_dataloader, val_dataloader, test_dataloader = get_robust_dataset(obfu_persona, obfu_rec, batch_size=50, max_len=50)

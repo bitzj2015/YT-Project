@@ -6,10 +6,11 @@ from constants import root_path
 VERSION = "_final_joint_cate_100_2_0.1"
 VERSION = "_final_joint_cate_103_2_test"
 VERSION = "_40_June"
-# VERSION = "_realuser"
+VERSION = "_reddit_40_new"
+VERSION = "_realuser_all"
 LOAD_METADATA = True
 
-with open(f"{root_path}/dataset/video_metadata{VERSION}.json", "r") as json_file:
+with open(f"{root_path}/dataset/video_metadata{VERSION}_new.json", "r") as json_file:
     video_metadata = json.load(json_file)
 
 with open(f"{root_path}/dataset/video_stat{VERSION}.json", "r") as json_file:
@@ -108,19 +109,19 @@ else:
 
 
 
-# with h5py.File(f"{root_path}/dataset/video_embeddings{VERSION}.hdf5", "r") as hf:
-#     embeddings = hf["embeddings"][:]
-#     videoIds = hf["video_ids"][:]
-# print(embeddings.shape)
-# print(isinstance(embeddings[0][0], np.float32))
-# augmented_embeddings = np.concatenate([embeddings, one_hot_categories, average_ratings.reshape(-1,1), view_counts.reshape(-1, 1)], axis=1)
-# print(augmented_embeddings.shape)
+with h5py.File(f"{root_path}/dataset/video_embeddings{VERSION}.hdf5", "r") as hf:
+    embeddings = hf["embeddings"][:]
+    videoIds = hf["video_ids"][:]
+print(embeddings.shape)
+print(isinstance(embeddings[0][0], np.float32))
+augmented_embeddings = np.concatenate([embeddings, one_hot_categories, average_ratings.reshape(-1,1), view_counts.reshape(-1, 1)], axis=1)
+print(augmented_embeddings.shape)
 
-# hf = h5py.File(f"{root_path}/dataset/video_embeddings{VERSION}_aug.hdf5", "w")
-# hf.create_dataset('embeddings', data=augmented_embeddings.astype("float32"))
-# hf.create_dataset('video_ids', data=videoIds)
-# hf.close()
-# print(isinstance(augmented_embeddings[0][0], np.float32))
+hf = h5py.File(f"{root_path}/dataset/video_embeddings{VERSION}_aug.hdf5", "w")
+hf.create_dataset('embeddings', data=augmented_embeddings.astype("float32"))
+hf.create_dataset('video_ids', data=videoIds)
+hf.close()
+print(isinstance(augmented_embeddings[0][0], np.float32))
 
 # with open(f"{root_path}/dataset/video_video_edge{VERSION}_w.json", "r") as json_file:
 #     video_video_edge = json.load(json_file)

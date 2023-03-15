@@ -12,6 +12,7 @@ from constants import root_path
 emb_model = SentenceTransformer('all-MiniLM-L6-v2', device='cuda')
 
 VERSION = "40_June"
+VERSION = "reddit_40_new"
 TYPE = ""
 MAX_LEN = 256
 

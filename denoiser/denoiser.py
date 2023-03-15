@@ -51,29 +51,6 @@ class DenoiserNet(torch.nn.Module):
         self.base = base
         self.train()
 
-    def get_rec(self, input_vu, input_vo, label_ro, with_graph=False):
-        self.eval()
-        batch_size, seq_len = input_vu.shape
-        # input_vu = self.graph_embeddings(input_vu.reshape(-1).tolist(), with_graph).reshape(batch_size, seq_len, self.emb_dim)
-        input_vu = self.video_embeddings[input_vu.reshape(-1).tolist()].reshape(batch_size, seq_len, self.emb_dim)
-
-        batch_size, seq_len = input_vo.shape
-        # input_vo = self.graph_embeddings(input_vo.reshape(-1).tolist(), with_graph).reshape(batch_size, seq_len, self.emb_dim)
-        input_vo = self.video_embeddings[input_vo.reshape(-1).tolist()].reshape(batch_size, seq_len, self.emb_dim)
-
-        label_ro = label_ro.to(self.device)
-
-        encoded_vu, _ = self.lstm_vu(input_vu)
-        encoded_vo, _ = self.lstm_vo(input_vo)
-        encoded_ro = self.relu(self.linear_ro(label_ro))
-        # print(encoded_vu[:, -1].size(), encoded_ro.size(), torch.cat([encoded_vu[:, -1], encoded_vo[:, -1], encoded_ro], axis=-1).size())
-        decoded_ru = self.linear_ru(torch.cat([encoded_vu[:, -1], encoded_vo[:, -1], encoded_ro], axis=-1))
-        # outputs = F.softmax(decoded_ru, -1)
-        outputs = (torch.sigmoid(decoded_ru) >= 0.5).int()
-        
-         
-        return outputs.detach().cpu().numpy()
-
     def forward(self, input_vu, input_vo, label_ro, label_ru, with_graph=False):
         # Get embeddings for non-obfuscated videos
         batch_size, seq_len = input_vu.shape

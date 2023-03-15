@@ -9,7 +9,7 @@ from worker import *
 
 # Define the environment for training RL agent
 class Env(object):
-    def __init__(self, env_args, yt_model, denoiser, rl_agent, workers, seed=0, id2video_map=None, use_rand=0):
+    def __init__(self, env_args, yt_model, denoiser, rl_agent, workers, seed=0, id2video_map=None, use_rand=0, video_by_cate=None):
         self.env_args = env_args
         self.all_rewards = []
         self.all_reward_gains = []
@@ -23,6 +23,9 @@ class Env(object):
         self.workers = workers
         self.seed = seed
         self.id2video_map = id2video_map
+        self.video_by_cate = video_by_cate
+        if video_by_cate:
+            self.video_cate_set = list(video_by_cate.keys())
         self.use_rand = use_rand
         self.bias_weight = [0 for _ in range(self.env_args.action_dim)]
         self.video_set = [i for i in range(self.env_args.action_dim)]
@@ -73,7 +76,7 @@ class Env(object):
         # Get non-obfuscated recommendations
         self.cur_cate_base = self.yt_model.get_rec(self.base_state, topk=100)
         
-        print(self.state.size(), self.base_state.size())
+        # print(self.state.size(), self.base_state.size())
         # print(self.cur_cate[0][3:6], self.cur_cate_base[0][3:6])
         # print(self.cur_cate[0][107:110], self.cur_cate_base[0][107:110])
 
@@ -81,13 +84,13 @@ class Env(object):
         # cur_cate_base_pred = self.denoiser.denoiser_model.get_rec(self.base_state, self.state, torch.from_numpy(self.cur_cate).to(self.env_args.device)) # input_vu, input_vo, label_ro
 
         # Reward for obfuscator
-        cur_reward_obfuscator = [wkl_divergence(self.cur_cate[i], self.cur_cate_base[i])[0] for i in range(len(self.workers))]
+        cur_reward_obfuscator = [ekl_divergence(self.cur_cate[i], self.cur_cate_base[i]) for i in range(len(self.workers))]
         # cur_reward_obfuscator = [((self.cur_cate_base[i] - self.cur_cate[i]) ** 2).sum() for i in range(len(self.workers))]
 
         # Reward for denoiser
         # cur_reward_denoiser = [-kl_divergence(self.cur_cate_base[i], cur_cate_base_pred[i]) for i in range(len(self.workers))]
         # cur_reward_denoiser = [0 for _ in range(len(self.workers))]
-        cur_reward_denoiser = [wkl_divergence(self.cur_cate[i], self.cur_cate_base[i])[1] for i in range(len(self.workers))]
+        cur_reward_denoiser = [kl_divergence(self.cur_cate[i], self.cur_cate_base[i]) for i in range(len(self.workers))]
 
         # Total rewards
         self.env_args.logger.info("KL distance of obfuscation: {}, denoiser: {}".format(np.mean(cur_reward_obfuscator), np.mean(cur_reward_denoiser)))
@@ -107,6 +110,9 @@ class Env(object):
         elif self.use_rand == 2:
             # normalized_bias_weight = [item / sum(self.bias_weight) for item in self.bias_weight]
             return np.random.choice(self.video_set, len(self.workers), p=self.bias_weight)
+        elif self.use_rand == 3:
+            video_cates = np.random.choice(self.video_cate_set, len(self.workers))
+            return video_cates
             
     def get_state_from_workers(self):
         self.state = np.stack(ray.get([worker.get_state.remote(self.env_args.his_len) for worker in self.workers]))
@@ -125,20 +131,61 @@ class Env(object):
             self.env_args.logger.info(f"Test denoiser, loss: {loss}, kl_div: {kl_div}")
         
     def rollout(self, train_rl=True):
-        self.env_args.logger.info("start rolling out")
-        for i in range(self.env_args.rollout_len):
+        self.env_args.logger.info(f"start rolling out, length: {self.env_args.rollout_len}")
+        for _ in range(self.env_args.rollout_len):
+            
             flag = random.random()
             if flag < self.env_args.alpha:
-                obfuscation_videos = self.get_next_obfuscation_videos()
-                ret = ray.get([self.workers[i].rollout.remote(obfuscation_videos[i]) for i in range(len(self.workers))])
-                if not ret[0]:
-                    break
-                self.send_reward_to_workers()
-                self.update_rl_agent(reward_only=True)
-                if self.use_rand == 1:
+                if self.use_rand != 3:
+                    obfuscation_videos = self.get_next_obfuscation_videos()
+
+                    ret = ray.get([self.workers[i].rollout.remote(obfuscation_videos[i]) for i in range(len(self.workers))])
+                    if not ret[0]:
+                        break
+                    self.send_reward_to_workers()
+                    self.update_rl_agent(reward_only=True)
+                    if self.use_rand == 1:
+                        rewards = self.get_reward_gain_from_workers()
+                        for i in range(len(obfuscation_videos)):
+                            self.bias_weight[obfuscation_videos[i]] += max(0, rewards[i])
+                else:
+                    best_obfuscation_video_cate = []
+                    best_reward = []
+                    rollout_end = False
+                    for t in range(100):
+                        obfuscation_video_cate = self.get_next_obfuscation_videos()
+
+                        obfuscation_videos = []
+                        for cate in obfuscation_video_cate:
+                            obfuscation_videos.append(np.random.choice(self.video_by_cate[cate], 1)[0])
+                        if t == 0:
+                            ret = ray.get([self.workers[i].rollout.remote(obfuscation_videos[i]) for i in range(len(self.workers))])
+                            if not ret[0]:
+                                rollout_end = True
+                                break
+                            best_obfuscation_video_cate = obfuscation_video_cate
+                        else:
+                            ret = ray.get([self.workers[i].re_rollout.remote(obfuscation_videos[i]) for i in range(len(self.workers))])
+                        self.send_reward_to_workers()
+                        rewards = self.get_reward_gain_from_workers()
+                        if t == 0:
+                            best_reward = rewards
+                        else:
+                            for i in range(len(obfuscation_video_cate)):
+                                if rewards[i] > best_reward[i]:
+                                    best_reward[i] = rewards[i]
+                                    best_obfuscation_video_cate[i] = obfuscation_video_cate[i]
+
+                    # Greedy search done
+                    if rollout_end:
+                        break
+
+                    obfuscation_videos = []
+                    for cate in best_obfuscation_video_cate:
+                        obfuscation_videos.append(np.random.choice(self.video_by_cate[cate], 1)[0])
+                    ret = ray.get([self.workers[i].re_rollout.remote(obfuscation_videos[i]) for i in range(len(self.workers))])
+                    self.send_reward_to_workers()
                     rewards = self.get_reward_gain_from_workers()
-                    for i in range(len(obfuscation_videos)):
-                        self.bias_weight[obfuscation_videos[i]] += max(0, rewards[i])
             else:
                 
                 ret = ray.get([self.workers[i].rollout.remote(-1) for i in range(len(self.workers))])

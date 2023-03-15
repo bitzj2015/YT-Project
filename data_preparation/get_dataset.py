@@ -22,6 +22,8 @@ VERSION = "_reddit"
 # FILTER = "_filter"
 VERSION = "_realuser"
 VERSION = "_40_June"
+VERSION = "_reddit_new"
+
 FILTER = "tags"
 
 with open(f"{root_path}/dataset/sock_puppets{VERSION}.json", "r") as json_file:

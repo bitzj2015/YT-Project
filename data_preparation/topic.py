@@ -12,15 +12,28 @@ VERSION = "_40"
 VERSION = "_realuser_0.2_test_reload"
 # VERSION = "_latest_joint_cate_010"
 VERSION = "_v1_binary_0.2_test"
-VERSION = "_realuser_0.2_test_v2"
-VERSION = "_0.3_v2_kldiv_0.3_test_0.2_test"
-VERSION = "_0.2_v2_kldiv_0.2_test"
+VERSION = "_realuser_0.2_test"
+# VERSION = "_0.5_v2_kldiv_0.5_test_0.2_test"
+# VERSION = "_0.5_v2_kldiv_0.5_test"
 # VERSION = "_realuser"
+# VERSION = "_reddit_40_new"
+# VERSION = "_v2_kldiv_sensitive"
+# VERSION = "_0.2_v2_kldiv_reddit2_test"
+VERSION = "_realuser"
+VERSION = "_0.2_v2_kldiv_pbooster_3_new_v2"
+VERSION = "_0.5_v2_kldiv_pbooster_0.5_3_new_v2"
+VERSION = "_0.7_v2_kldiv_feb_0.7_0_new_v2"
+VERSION = "_0.2_v2_kldiv_pbooster_reddit_0.2_3_new_v2"
+VERSION = "_0.5_realuser_0_new_v2"
+VERSION = "_0.2_realuser_pbooster_3_new_v2"
+
+
+
 saved_path = "../"
 
 for phase in ["get_tag", "get_embed", "get_sim", "get_map"]:
     if phase == "get_tag":
-        with open(f"{root_path}/dataset/video_metadata{VERSION}.json", "r") as json_file:
+        with open(f"{root_path}/dataset/video_metadata{VERSION}_new.json", "r") as json_file:
             video_metadata = json.load(json_file)
         # print(cate_ids)
 
@@ -71,25 +84,23 @@ for phase in ["get_tag", "get_embed", "get_sim", "get_map"]:
         with open(f"{saved_path}/dataset/topic/tags{VERSION}.json", "r") as json_file:
             tags = json.load(json_file)
 
-        try:
-            del tags[""]
-            del tags[" "]
-        except:
-            print("Continue")
-        # create an example sentence
-        tags_emb = []
-        for c in tags.keys():
-            try: 
-                s = Sentence(c)
-                tags_emb.append(s)
-            except:
-                continue
+        tmp = list(tags.keys())
 
-        # embed the sentence with our document embedding
-        document_embeddings.embed(tags_emb)
-        tags_embs = [c.embedding.tolist() for c in tags_emb]
+        tags_embs = []
+        for c in tmp:
+            try:
+                sentence_c = Sentence(c)
+                document_embeddings.embed(sentence_c)
+                tags_embs.append(sentence_c.embedding.tolist())
+            except:
+                del tags[c]
+                print(c)
+
         tags_embs = np.array(tags_embs)
-        print(tags_embs.shape)
+        assert len(tags.keys()) == tags_embs.shape[0]
+
+        with open (f"{saved_path}/dataset/topic/tags{VERSION}.json", "w") as json_file:
+            json.dump(tags, json_file)
 
         hf = h5py.File(f"{saved_path}/dataset/topic/data{VERSION}2.hdf5", 'w')
         hf.create_dataset('classes', data=class_embs)
@@ -132,12 +143,8 @@ for phase in ["get_tag", "get_embed", "get_sim", "get_map"]:
 
         with open(f"{saved_path}/dataset/topic/tags{VERSION}.json", "r") as json_file:
             tags = json.load(json_file)
-        try:
-            del tags[""]
-            del tags[" "]
-        except:
-            print("Continue")
 
+        assert len(tags) == len(sim_max)
         tag2class = {}
         class_list = list(classes.keys())
         tag_list = list(tags.keys())

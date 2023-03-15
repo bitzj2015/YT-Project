@@ -53,6 +53,8 @@ class RobustNet(torch.nn.Module):
         
         # Get softmax and logits
         # print(logits.size(), label.size(), mask.unsqueeze(-1).size())
+        label = label.to(self.device)
+        mask = mask.to(self.device)
         logits = label * logits * mask.unsqueeze(-1)
         logits = logits.sum(-1).sum(-1) / mask.sum(-1)
         
@@ -99,13 +101,13 @@ class RobustDataset(Dataset):
 
         sample = {
             "input": torch.from_numpy(np.array(
-                self.persona[idx] + [0 for _ in range(self.max_len-len(self.persona[idx]))]
+                self.persona[idx][:self.max_len] + [0 for _ in range(self.max_len-len(self.persona[idx]))]
                 ).astype("float32")), 
             "label": torch.from_numpy(np.array(
-                self.label[idx] + [[0, 1] for _ in range(self.max_len-len(self.persona[idx]))]
+                self.label[idx][:self.max_len] + [[0, 1] for _ in range(self.max_len-len(self.persona[idx]))]
                 ).astype("int32")),
             "mask": torch.from_numpy(np.array(
-                [1 for _ in range(len(self.persona[idx]))] + [0 for _ in range(self.max_len-len(self.persona[idx]))]
+                [1 for _ in range(len(self.persona[idx][:self.max_len]))] + [0 for _ in range(self.max_len-len(self.persona[idx]))]
                 ).astype("int32"))
         }
         return sample

@@ -17,14 +17,15 @@ parser.add_argument('--version', dest="version", type=str, default="base3")
 parser.add_argument('--use-base', dest="use_base", default=False, action='store_true')
 args = parser.parse_args()
 
-tag = "realuser"
+tag = "realuser_all"
+
 tag_base = "40_June"
 use_cuda = False
 if torch.cuda.is_available():
     use_cuda = True
 device = torch.device("cuda" if use_cuda else "cpu")
 
-with open(f"../obfuscation/figs/dataset_{tag}.json", "r") as json_file:
+with open(f"../obfuscation/figs/dataset_0.2_realuser_pbooster_3_new_v2.json", "r") as json_file:
     data = json.load(json_file)
 
 with open(f"/scratch/YT_dataset/dataset/video_ids_{tag}.json", "r") as json_file:
@@ -79,23 +80,23 @@ base_rec = []
 obfu_rec = []
 MAX_LEN = 0
 TYPE = args.version.split("_")[-1]
-for i in range(200):
-    # try:
-    base_persona.append([VIDEO_IDS[video] for video in data[f"rand_base_{i}"]["viewed"]])
-    base_rec.append(data[f"rand_base_{i}"]["cate_dist"])
+for i in range(936):
+    try:
+        base_persona.append([VIDEO_IDS[video] for video in data[f"rand_base_{i}"]["viewed"]])
+        base_rec.append(data[f"rand_base_{i}"]["cate_dist"])
 
-    obfu_persona.append([VIDEO_IDS[video] for video in data[f"{TYPE}_obfu_{i}"]["viewed"]])
-    obfu_rec.append(data[f"{TYPE}_obfu_{i}"]["cate_dist"])
-    if len(obfu_persona[-1]) > MAX_LEN:
-        MAX_LEN = len(obfu_persona[-1])
+        obfu_persona.append([VIDEO_IDS[video] for video in data[f"{TYPE}_obfu_{i}"]["viewed"]])
+        obfu_rec.append(data[f"{TYPE}_obfu_{i}"]["cate_dist"])
+        if len(obfu_persona[-1]) > MAX_LEN:
+            MAX_LEN = len(obfu_persona[-1])
 
     # base_persona.append([video_ids[video] for video in data[f"rand_base_{i}"]["viewed"]])
     # base_rec.append(data[f"rand_base_{i}"]["cate_dist"])
 
     # obfu_persona.append([video_ids[video] for video in data[f"rand_obfu_{i}"]["viewed"]])
     # obfu_rec.append(data[f"rand_obfu_{i}"]["cate_dist"])
-    # except:
-    #     continue
+    except:
+        continue
 
 # train_dataloader = get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, batch_size=32, max_len=MAX_LEN, all_eval=True)
 
@@ -110,7 +111,7 @@ for i in range(200):
 
 
 
-EVAL = True
+EVAL = False
 kl_list = []
 for t in range(3):
     # Define denoiser
@@ -122,7 +123,7 @@ for t in range(3):
     if not EVAL:
         train_dataloader, val_dataloader, test_dataloader = get_denoiser_dataset(base_persona, obfu_persona, base_rec, obfu_rec, batch_size=32, max_len=MAX_LEN)
         best_kl = 10
-        for ep in range(50):
+        for ep in range(20):
             logger.info(f"Training epoch: {ep}")
             denoiser.train(train_dataloader)
             logger.info(f"Testing epoch: {ep}")
